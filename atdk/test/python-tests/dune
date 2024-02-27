@@ -3,11 +3,9 @@
 ;
 (rule
   (targets
-    allcaps.py
     everything.py
   )
   (deps
-    ../atd-input/ALLCAPS.atd
     ../atd-input/everything.atd
   )
   (action
