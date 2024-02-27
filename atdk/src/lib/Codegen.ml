@@ -1,7 +1,7 @@
 (*
-   Python code generation for JSON support (no biniou support)
+   Kotlin code generation for JSON support (no biniou support)
 
-   Takes the contents of a .atd file and translates it to a .py file.
+   Takes the contents of a .atd file and translates it to a .kt file.
 
    Design:
    - Python's standard 'json' module handles the parsing into generic
@@ -37,9 +37,9 @@ type env = {
   translate_inst_variable: unit -> (string -> string);
 }
 
-let annot_schema_python : Atd.Annot.schema_section =
+let annot_schema_kotlin : Atd.Annot.schema_section =
   {
-    section = "python";
+    section = "kotlin";
     fields = [
       Module_head, "text";
       Module_head, "json_py.text";
@@ -50,9 +50,9 @@ let annot_schema_python : Atd.Annot.schema_section =
   }
 
 let annot_schema : Atd.Annot.schema =
-  annot_schema_python :: Atd.Json.annot_schema_json
+  annot_schema_kotlin :: Atd.Json.annot_schema_json
 
-(* Translate a preferred variable name into an available Python identifier. *)
+(* Translate a preferred variable name into an available Kotlin identifier. *)
 let trans env id =
   env.translate_variable id
 
@@ -83,7 +83,7 @@ let to_camel_case s =
     | 'A'..'Z' | 'a'..'z' | '_' -> name
     | _ -> "X" ^ name
 
-(* Use CamelCase as recommended by PEP 8. *)
+(* Use CamelCase as recommended by Kotlin Style Guide. *)
 let class_name env id =
   trans env (to_camel_case id)
 
@@ -100,20 +100,22 @@ let create_class_name env name =
 let init_env () : env =
   let keywords = [
     (* Keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#keywords
+       https://kotlinlang.org/docs/keyword-reference.html
     *)
-    "False"; "await"; "else"; "import"; "pass";
-    "None"; "break"; "except"; "in"; "raise";
-    "True"; "class"; "finally"; "is"; "return";
-    "and"; "continue"; "for"; "lambda"; "try";
-    "as"; "def"; "from"; "nonlocal"; "while";
-    "assert"; "del"; "global"; "not"; "with";
-    "async"; "elif"; "if"; "or"; "yield";
+    "as"; "as?"; "break"; "class"; "continue";
+    "do"; "else"; "false"; "for"; "fun";
+    "if"; "in"; "!in"; "interface"; "is"; "!is";
+    "null"; "object"; "package"; "return"; "super"; "this";
+    "throw"; "true"; "try"; "typealias"; "typeof";
+    "val"; "var"; "when"; "while";
 
     (* Soft keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#soft-keywords
+       https://kotlinlang.org/docs/keyword-reference.html#soft-keywords
     *)
-    "match"; "case"; "_";
+    "by"; "catch"; "constructor"; "delegate"; "dynamic";
+    "field"; "file"; "finally"; "get"; "import";
+    "init"; "param"; "property"; "receiver"; "set";
+    "setparam"; "value"; "where";
   ]
   in
   (* Various variables used in the generated code.
