@@ -357,7 +357,7 @@ let rec type_name_of_expr env (e : type_expr) : string =
              (type_name_of_expr env value)
       )
   | Option (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
-  | Nullable (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
+  | Nullable (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> todo "wrap"
   | Name (loc, (loc2, name, []), an) -> kt_type_name env name
@@ -415,7 +415,7 @@ let unwrap_field_type loc field_name kind e =
   | With_default -> e
   | Optional ->
       match e with
-      | Option (loc, e, an) -> e
+      | Option (loc, e, an) | Nullable (loc, e, an) -> e
       | _ ->
           A.error_at loc
             (sprintf "the type of optional field '%s' should be of \
@@ -449,8 +449,7 @@ let rec json_writer env e =
       )
   | Option (loc, e, an) ->
       sprintf "_atd_write_option(%s)" (json_writer env e)
-  | Nullable (loc, e, an) ->
-      sprintf "_atd_write_nullable(%s)" (json_writer env e)
+  | Nullable (loc, e, an) -> "encodeNullableSerializableElement"
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> json_writer env e
   | Name (loc, (loc2, name, []), an) ->
@@ -485,15 +484,16 @@ and tuple_writer env cells =
 
 let construct_json_field env trans_meth
     ((loc, (name, kind, an), e) : simple_field) i =
-  let unwrapped_type = unwrap_field_type loc name kind e in
-  let writer_function = json_writer env unwrapped_type in
-  let list_transform = match unwrapped_type with
+  let writer_function = json_writer env e in
+  let list_transform = match e with
     | List (loc, e, an) -> 
       let element_type = type_name_of_expr env e in
       sprintf " ListSerializer(%s.serializer())," element_type
+    | Nullable (loc, e, an) ->
+      let element_type = type_name_of_expr env e in
+      sprintf " %s.serializer()," element_type
     | _ -> ""
   in
-  let assignment =
     [
       Line (sprintf "%s(descriptor, %d,%s value.%s)"
               writer_function
@@ -501,17 +501,6 @@ let construct_json_field env trans_meth
               list_transform
               (inst_var_name trans_meth name))
     ]
-  in
-  match kind with
-  | Required
-  | With_default -> assignment
-  | Optional ->
-      [
-        Line (sprintf "if self.%s is not None:"
-                (inst_var_name trans_meth name));
-        Block assignment
-      ]
-
 (*
    Function value that can be applied to a JSON node, converting it
    to the desired value.
@@ -539,8 +528,7 @@ let rec json_reader env (e : type_expr) =
       )
   | Option (loc, e, an) ->
       sprintf "_atd_read_option(%s)" (json_reader env e)
-  | Nullable (loc, e, an) ->
-      sprintf "_atd_read_nullable(%s)" (json_reader env e)
+  | Nullable (loc, e, an) -> "decodeNullableSerializableElement"
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> json_reader env e
   | Name (loc, (loc2, name, []), an) ->
@@ -576,29 +564,20 @@ and tuple_reader env cells =
 let from_json_class_argument
     env trans_meth kt_class_name ((loc, (name, kind, an), e) : simple_field) i =
   let kotlin_name = inst_var_name trans_meth name in
-  let unwrapped_type =
-    match kind with
-    | Required
-    | With_default -> e
-    | Optional ->
-        match e with
-        | Option (loc, e, an) -> e
-        | _ ->
-            A.error_at loc
-              (sprintf "the type of optional field '%s' should be of \
-                        the form 'xxx option'" name)
-  in
-  let list_transform = match unwrapped_type with
+  let deserialization_strat = match e with
     | List (loc, e, an) -> 
       let element_type = type_name_of_expr env e in
       sprintf ", ListSerializer(%s.serializer())" element_type
+    | Nullable (loc, e, an) ->
+      let element_type = type_name_of_expr env e in
+      sprintf ", %s.serializer()" element_type
     | _ -> ""
   in
   sprintf "%s = %s(descriptor, %d%s),"
     kotlin_name
-    (json_reader env unwrapped_type)
+    (json_reader env e)
     i
-    list_transform
+    deserialization_strat
 
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
@@ -608,7 +587,7 @@ let inst_var_declaration
   let default =
     match kind with
     | Required -> ""
-    | Optional -> " = None"
+    | Optional -> " = null"
     | With_default ->
         match get_python_default unwrapped_e an with
         | None -> ""
