@@ -490,11 +490,11 @@ let assoc_kind loc (e : type_expr) an : assoc_kind =
 (* Map ATD built-in types to built-in Kotlin types *)
 let kt_type_name env (name : string) =
   match name with
-  | "unit" -> "None"
-  | "bool" -> "bool"
-  | "int" -> "int"
-  | "float" -> "float"
-  | "string" -> "str"
+  | "unit" -> "Unit"
+  | "bool" -> "Boolean"
+  | "int" -> "Int"
+  | "float" -> "Double"
+  | "string" -> "String"
   | "abstract" -> "Any"
   | user_defined -> class_name env user_defined
 
@@ -512,17 +512,17 @@ let rec type_name_of_expr env (e : type_expr) : string =
      (match assoc_kind loc e an with
        | Array_list
        | Object_list _ ->
-           sprintf "List[%s]"
+           sprintf "List<%s>"
              (type_name_of_expr env e)
        | Array_dict (key, value) ->
-           sprintf "Dict[%s, %s]"
+           sprintf "Map<%s, %s>"
              (type_name_of_expr env key) (type_name_of_expr env value)
        | Object_dict value ->
-           sprintf "Dict[str, %s]"
+           sprintf "Map<String, %s>"
              (type_name_of_expr env value)
       )
-  | Option (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
-  | Nullable (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
+  | Option (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
+  | Nullable (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> todo "wrap"
   | Name (loc, (loc2, name, []), an) -> kt_type_name env name
@@ -534,25 +534,25 @@ let rec get_default_default (e : type_expr) : string option =
   | Sum _
   | Record _
   | Tuple _ (* a default tuple could be possible but we're lazy *) -> None
-  | List _ -> Some "[]"
+  | List _ -> Some "listOf()"
   | Option _
-  | Nullable _ -> Some "None"
+  | Nullable _ -> Some "null"
   | Shared (loc, e, an) -> get_default_default e
   | Wrap (loc, e, an) -> get_default_default e
   | Name (loc, (loc2, name, []), an) ->
       (match name with
-       | "unit" -> Some "None"
-       | "bool" -> Some "False"
+       | "unit" -> None
+       | "bool" -> Some "false"
        | "int" -> Some "0"
        | "float" -> Some "0.0"
        | "string" -> Some {|""|}
-       | "abstract" -> Some "None"
+       | "abstract" -> None
        | _ -> None
       )
   | Name _ -> None
   | Tvar _ -> None
 
-let get_python_default (e : type_expr) (an : annot) : string option =
+let get_kotlin_default (e : type_expr) (an : annot) : string option =
   let user_default = Python_annot.get_python_default an in
   match user_default with
   | Some s -> Some s
@@ -565,7 +565,7 @@ let has_no_class_inst_prop_default
   | Required -> true
   | Optional -> (* default is None *) false
   | With_default ->
-      match get_python_default e an with
+      match get_kotlin_default e an with
       | Some _ -> false
       | None ->
           (* There's either no default at all which is an error,
@@ -752,7 +752,7 @@ let from_json_class_argument
           (single_esc json_name)
     | Optional -> "None"
     | With_default ->
-        match get_python_default e an with
+        match get_kotlin_default e an with
         | Some x -> x
         | None ->
             A.error_at loc
@@ -774,15 +774,11 @@ let inst_var_declaration
   let default =
     match kind with
     | Required -> ""
-    | Optional -> " = None"
+    | Optional -> " = null"
     | With_default ->
-        match get_python_default unwrapped_e an with
+        match get_kotlin_default unwrapped_e an with
         | None -> ""
-        | Some x ->
-            (* This construct ensures that a fresh default value is
-               evaluated for each class instantiation. It's important for
-               default lists since Python lists are mutable. *)
-            sprintf " = field(default_factory=lambda: %s)" x
+        | Some x -> sprintf " = %s" x
   in
   [
     Line (sprintf "%s: %s%s" var_name type_name default)
