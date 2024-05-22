@@ -1,10 +1,10 @@
 ;
-; Convert ATD -> Python
+; Convert ATD -> Kotiln
 ;
 (rule
   (targets
-    allcaps.py
-    everything.py
+    allcaps.kt
+    everything.kt
   )
   (deps
     ../atd-input/ALLCAPS.atd
@@ -14,7 +14,7 @@
     (run %{bin:atdk} %{deps})))
 
 ;
-; Typecheck and run the tests on the generated Python code.
+; Typecheck and run the tests on the generated Kotlin code.
 ;
 (rule
  (alias runtest)

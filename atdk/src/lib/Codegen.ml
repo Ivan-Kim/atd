@@ -1,23 +1,7 @@
 (*
-   Python code generation for JSON support (no biniou support)
+   Kotlin code generation for JSON support (no biniou support)
 
-   Takes the contents of a .atd file and translates it to a .py file.
-
-   Design:
-   - Python's standard 'json' module handles the parsing into generic
-     dictionaries and such.
-   - The generated code assigns one class to each ATD record. The use
-     of type annotations allows for some type checking with mypy.
-   - When converting from JSON to Python, the well-formedness of the data
-     is checked.
-   - When converting from Python to JSON, the well-formedness of the data
-     is checked as well since the type system is too easy to bypass.
-   - Sum types use one main class and one subclass per case.
-   - Tuples, like arrays, options, and nullables don't get a class of
-     their own.
-   - Generic functions are provided to deal with the case where the JSON
-     root is an array.
-
+   Takes the contents of a .atd file and translates it to a .kt file.
    Look into the tests to see what generated code looks like.
 *)
 
@@ -458,7 +442,7 @@ def _atd_write_option(write_elt: Callable[[Any], Any]) \
     atd_filename
 
 let not_implemented loc msg =
-  A.error_at loc ("not implemented in atdpy: " ^ msg)
+  A.error_at loc ("not implemented in atdk: " ^ msg)
 
 let todo hint =
   failwith ("TODO: " ^ hint)
@@ -476,7 +460,7 @@ let double_spaced blocks =
   spaced ~spacer:[Line ""; Line ""] blocks
 
 (*
-   Representations of ATD type '(string * value) list' in JSON and Python.
+   Representations of ATD type '(string * value) list' in JSON and Kotlin.
    Key type or value type are provided when it's useful.
 *)
 type assoc_kind =
@@ -503,8 +487,8 @@ let assoc_kind loc (e : type_expr) an : assoc_kind =
   | _, Object, _ -> error_at loc "not a (string * _) list"
   | _, Array, _ -> error_at loc "not a (_ * _) list"
 
-(* Map ATD built-in types to built-in mypy types *)
-let py_type_name env (name : string) =
+(* Map ATD built-in types to built-in Kotlin types *)
+let kt_type_name env (name : string) =
   match name with
   | "unit" -> "None"
   | "bool" -> "bool"
@@ -541,7 +525,7 @@ let rec type_name_of_expr env (e : type_expr) : string =
   | Nullable (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> todo "wrap"
-  | Name (loc, (loc2, name, []), an) -> py_type_name env name
+  | Name (loc, (loc2, name, []), an) -> kt_type_name env name
   | Name (loc, (_, name, _::_), _) -> assert false
   | Tvar (loc, _) -> not_implemented loc "type variables"
 
@@ -1237,7 +1221,7 @@ let run_file src_path =
     (if Filename.check_suffix src_name ".atd" then
        Filename.chop_suffix src_name ".atd"
      else
-       src_name) ^ ".py"
+       src_name) ^ ".kt"
     |> String.lowercase_ascii
   in
   let dst_path = dst_name in
