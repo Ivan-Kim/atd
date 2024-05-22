@@ -83,7 +83,7 @@ let to_camel_case s =
     | 'A'..'Z' | 'a'..'z' | '_' -> name
     | _ -> "X" ^ name
 
-(* Use CamelCase as recommended by PEP 8. *)
+(* Use CamelCase as recommended by Kotlin style guide. *)
 let class_name env id =
   trans env (to_camel_case id)
 
@@ -100,20 +100,22 @@ let create_class_name env name =
 let init_env () : env =
   let keywords = [
     (* Keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#keywords
+       https://kotlinlang.org/docs/keyword-reference.html
     *)
-    "False"; "await"; "else"; "import"; "pass";
-    "None"; "break"; "except"; "in"; "raise";
-    "True"; "class"; "finally"; "is"; "return";
-    "and"; "continue"; "for"; "lambda"; "try";
-    "as"; "def"; "from"; "nonlocal"; "while";
-    "assert"; "del"; "global"; "not"; "with";
-    "async"; "elif"; "if"; "or"; "yield";
+    "as"; "as?"; "break"; "class"; "continue";
+    "do"; "else"; "false"; "for"; "fun";
+    "if"; "in"; "!in"; "interface"; "is"; "!is";
+    "null"; "object"; "package"; "return"; "super"; "this";
+    "throw"; "true"; "try"; "typealias"; "typeof";
+    "val"; "var"; "when"; "while";
 
     (* Soft keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#soft-keywords
+       https://kotlinlang.org/docs/keyword-reference.html#soft-keywords
     *)
-    "match"; "case"; "_";
+    "by"; "catch"; "constructor"; "delegate"; "dynamic";
+    "field"; "file"; "finally"; "get"; "import";
+    "init"; "param"; "property"; "receiver"; "set";
+    "setparam"; "value"; "where";
   ]
   in
   (* Various variables used in the generated code.
@@ -172,7 +174,6 @@ let init_env () : env =
 type quote_kind = Single | Double
 
 (* Escape a string fragment to be placed in single quotes or double quotes.
-   https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
 *)
 let escape_string_content quote_kind s =
   let buf = Buffer.create (String.length s + 2) in
