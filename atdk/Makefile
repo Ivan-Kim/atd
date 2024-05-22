@@ -6,11 +6,11 @@ DUNE ?= dune
 
 .PHONY: build
 build:
-	rm -f bin/atdpy
+	rm -f bin/atdk
 	$(MAKE) clean-for-dune
 	$(DUNE) build @all
 	mkdir -p bin
-	ln -s ../../_build/install/default/bin/atdpy bin/atdpy
+	ln -s ../../_build/install/default/bin/atdk bin/atdk
 
 # The symlink facilitates the development of test code that depends on the
 # generated code.
@@ -18,7 +18,7 @@ build:
 test:
 	$(MAKE) clean-for-dune
 	$(DUNE) runtest -f; status=$$?; \
-	  ln -s ../../../_build/default/atdpy/test/python-tests/everything.py \
+	  ln -s ../../../_build/default/atdk/test/python-tests/everything.py \
 	    test/python-tests/everything.py && \
 	  exit "$$status"
 

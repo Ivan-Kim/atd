@@ -11,14 +11,14 @@
     ../atd-input/everything.atd
   )
   (action
-    (run %{bin:atdpy} %{deps})))
+    (run %{bin:atdk} %{deps})))
 
 ;
 ; Typecheck and run the tests on the generated Python code.
 ;
 (rule
  (alias runtest)
- (package atdpy)
+ (package atdk)
  (deps
   everything.py
   (glob_files *.py))

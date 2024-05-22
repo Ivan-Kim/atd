@@ -13,6 +13,7 @@ all:
 	$(MAKE) -C atdd clean-for-dune
 	$(MAKE) -C atdcpp clean-for-dune
 	$(MAKE) -C atdts clean-for-dune
+	$(MAKE) -C atdk clean-for-dune
 	$(DUNE) build
 
 # Install the OCaml dependencies for the build.
@@ -52,7 +53,7 @@ test:
 	$(MAKE) test-ts
 	$(MAKE) test-d
 	$(MAKE) test-cpp
-
+	$(MAKE) test-kotlin
 
 # Test the OCaml code used by all the backends
 test-common:
@@ -100,6 +101,11 @@ test-d:
 test-cpp:
 	$(MAKE) test-common
 	$(MAKE) -C atdcpp test
+
+.PHONY: test-kotlin
+test-kotlin:
+	$(MAKE) test-common
+	$(MAKE) -C atdk test
 
 ############################################################################
 

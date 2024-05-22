@@ -1,10 +1,10 @@
 (executable
- (name Atdpy_main)
- (public_name atdpy)
- (package atdpy)
+ (name Atdk_main)
+ (public_name atdk)
+ (package atdk)
  (libraries
    cmdliner
-   atdpy
+   atdk
    atd
  )
 )
