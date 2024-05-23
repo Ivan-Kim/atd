@@ -58,7 +58,7 @@ let get_python_decorators an : string list =
 let get_python_text an : string list =
   Atd.Annot.get_fields
     ~parse:(fun s -> Some s)
-    ~sections:["python"]
+    ~sections:["kotlin"]
     ~field:"text"
     an
 
@@ -66,6 +66,6 @@ let get_python_json_text an : string list =
   get_python_text an
   @ Atd.Annot.get_fields
     ~parse:(fun s -> Some s)
-    ~sections:["python"]
-    ~field:"json_py.text"
+    ~sections:["kotlin"]
+    ~field:"json_kt.text"
     an

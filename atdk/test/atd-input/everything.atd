@@ -1,6 +1,6 @@
-<python text="# This was inserted by the user.">
-<python json_py.text="import deco">
-<python json_py.text="from dataclasses import dataclass">
+<kotlin text="// This was inserted by the user.">
+<kotlin json_kt.text="import kotlinx.serialization.*">
+<kotlin json_kt.text="import kotlinx.serialization.json.*">
 
 type kind = [
   | Root (* class name conflict *)

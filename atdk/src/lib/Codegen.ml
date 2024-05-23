@@ -781,11 +781,11 @@ let inst_var_declaration
         | Some x -> sprintf " = %s" x
   in
   [
-    Line (sprintf "%s: %s%s" var_name type_name default)
+    Line (sprintf "val %s: %s%s," var_name type_name default)
   ]
 
 let record env ~class_decorators loc name (fields : field list) an =
-  let py_class_name = class_name env name in
+  let kt_class_name = class_name env name in
   let trans_meth = env.translate_inst_variable () in
   let fields =
     List.map (function
@@ -794,11 +794,7 @@ let record env ~class_decorators loc name (fields : field list) an =
       fields
   in
   (*
-     Reorder fields with no-defaults first as required by @dataclass.
-     Starting with Python 3.10, '@dataclass(kw_only=True)' solves this
-     problem and makes this reordering unnecessary.
-     TODO: remove once we require python >= 3.10. It could also be done
-     as command-line flag specifying the Python version.
+     Reorder fields with no-defaults first
   *)
   let fields =
     let no_default, with_default =
@@ -813,13 +809,13 @@ let record env ~class_decorators loc name (fields : field list) an =
       Inline (construct_json_field env trans_meth x)) fields in
   let from_json_class_arguments =
     List.map (fun x ->
-      Line (from_json_class_argument env trans_meth py_class_name x)
+      Line (from_json_class_argument env trans_meth kt_class_name x)
     ) fields in
   let from_json =
     [
       Line "@classmethod";
       Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc kt_class_name));
       Block [
         Line "if isinstance(x, dict):";
         Block [
@@ -830,7 +826,7 @@ let record env ~class_decorators loc name (fields : field list) an =
         Line "else:";
         Block [
           Line (sprintf "_atd_bad_json('%s', x)"
-                  (single_esc py_class_name))
+                  (single_esc kt_class_name))
         ]
       ]
     ]
@@ -849,7 +845,7 @@ let record env ~class_decorators loc name (fields : field list) an =
     [
       Line "@classmethod";
       Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc kt_class_name));
       Block [
         Line "return cls.from_json(json.loads(x))"
       ]
@@ -865,15 +861,17 @@ let record env ~class_decorators loc name (fields : field list) an =
   in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
+    Line (sprintf "data class %s(" kt_class_name);
+    Block (spaced [Inline inst_var_declarations]);
+    Line ") {";
     Block (spaced [
       Line (sprintf {|"""Original type: %s = { ... }"""|} name);
-      Inline inst_var_declarations;
       Inline from_json;
       Inline to_json;
       Inline from_json_string;
       Inline to_json_string;
-    ])
+    ]);
+    Line "}";
   ]
 
 (*
@@ -1137,18 +1135,9 @@ let sum env ~class_decorators loc name cases =
   ]
   |> double_spaced
 
-let uses_dataclass_decorator =
-  let rex = Re.Pcre.regexp {|\A[ \t\r\n]*dataclass(\(|[ \t\r\n]|\z)|} in
-  fun s -> Re.Pcre.pmatch ~rex s
-
 let get_class_decorators an =
   let decorators = Python_annot.get_python_decorators an in
-  (* Avoid duplicate use of the @dataclass decorator, which doesn't work
-     if some options like frozen=True are used. *)
-  if List.exists uses_dataclass_decorator decorators then
-    decorators
-  else
-    decorators @ ["dataclass"]
+  decorators @ ["Serializable"]
 
 let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
   if param <> [] then
