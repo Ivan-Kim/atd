@@ -499,7 +499,13 @@ let rec type_name_of_expr env (e : type_expr) : string =
         xs
         |> List.map (fun (loc, x, an) -> type_name_of_expr env x)
       in
-      sprintf "Tuple[%s]" (String.concat ", " type_names)
+      (* Kotlin does not support tuples as builtin language construct *)
+      let tuple_type = match List.length type_names with
+      | 2 -> "Pair"
+      | 3 -> "Triple" 
+      | _ -> not_implemented loc "tuples of more than three elements"
+      in
+      sprintf "%s<%s>" tuple_type (String.concat ", " type_names)
   | List (loc, e, an) ->
      (match assoc_kind loc e an with
        | Array_list
@@ -806,40 +812,41 @@ class Foo:
     ...
 *)
 let alias_wrapper env ~class_decorators name type_expr =
-  let py_class_name = class_name env name in
+  let kt_class_name = class_name env name in
   let value_type = type_name_of_expr env type_expr in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
+    Line (sprintf "data class %s(%s) {" kt_class_name (sprintf "val wrapped: %s" value_type));
     Block [
       Line (sprintf {|"""Original type: %s"""|} name);
       Line "";
-      Line (sprintf "value: %s" value_type);
-      Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
+      Line (sprintf "fun fromJson(x: JsonElement): %s {"
+              (single_esc kt_class_name));
       Block [
-        Line (sprintf "return cls(%s(x))" (json_reader env type_expr))
+        Line "return Json.decodeFromJsonElement(serializer(), x)";
       ];
+      Line "}";
       Line "";
-      Line "def to_json(self) -> Any:";
+      Line "fun toJson(): JsonElement {";
       Block [
-        Line (sprintf "return %s(self.value)" (json_writer env type_expr))
+        Line "return Json.encodeToJsonElement(serializer(), this)"
       ];
+      Line "}";
       Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
+      Line (sprintf "fun fromJsonString(x: String): %s {"
+              (single_esc kt_class_name));
       Block [
-        Line "return cls.from_json(json.loads(x))"
+        Line "return Json.decodeFromString(serializer(), x)"
       ];
+      Line "}";
       Line "";
-      Line "def to_json_string(self, **kw: Any) -> str:";
+      Line "fun toJsonString(): String {";
       Block [
-        Line "return json.dumps(self.to_json(), **kw)"
-      ]
-    ]
+        Line "return Json.encodeToString(serializer(), this)"
+      ];
+      Line "}";
+    ];
+    Line "}";
   ]
 
 let case_class env ~class_decorators type_name
