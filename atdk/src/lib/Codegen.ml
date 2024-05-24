@@ -133,7 +133,7 @@ let init_env () : env =
     Atd.Unique_name.init
       ~reserved_identifiers:(
         ["from_json"; "to_json";
-         "from_json_string"; "to_json_string"]
+         "fromJsonString"; "toJsonString"]
         @ keywords
       )
       ~reserved_prefixes:["__"]
@@ -183,14 +183,6 @@ let fixed_size_preamble atd_filename =
 This implements classes for the types defined in '%s', providing
 methods and functions to convert data from/to JSON.
 """
-
-# Disable flake8 entirely on this file:
-# flake8: noqa
-
-# Import annotations to allow forward references
-from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, Union
 
 import json
 
@@ -622,8 +614,8 @@ let rec json_writer env e =
   | Name (loc, (loc2, name, []), an) ->
       (match name with
        | "bool" | "int" | "float" | "string" -> sprintf "_atd_write_%s" name
-       | "abstract" -> "(lambda x: x)"
-       | _ -> "(lambda x: x.to_json())")
+       | "abstract" -> "{ it }"
+       | _ -> "{ x -> x.to_json() }")
   | Name (loc, _, _) -> not_implemented loc "parametrized types"
   | Tvar (loc, _) -> not_implemented loc "type variables"
 
@@ -645,28 +637,6 @@ and tuple_writer env cells =
            else _atd_bad_python('tuple of length %d', x))"
     tuple_body
     len len
-
-let construct_json_field env trans_meth
-    ((loc, (name, kind, an), e) : simple_field) =
-  let unwrapped_type = unwrap_field_type loc name kind e in
-  let writer_function = json_writer env unwrapped_type in
-  let assignment =
-    [
-      Line (sprintf "res['%s'] = %s(self.%s)"
-              (Atd.Json.get_json_fname name an |> single_esc)
-              writer_function
-              (inst_var_name trans_meth name))
-    ]
-  in
-  match kind with
-  | Required
-  | With_default -> assignment
-  | Optional ->
-      [
-        Line (sprintf "if self.%s is not None:"
-                (inst_var_name trans_meth name));
-        Block assignment
-      ]
 
 (*
    Function value that can be applied to a JSON node, converting it
@@ -728,44 +698,6 @@ and tuple_reader env cells =
     tuple_body
     len len
 
-let from_json_class_argument
-    env trans_meth py_class_name ((loc, (name, kind, an), e) : simple_field) =
-  let python_name = inst_var_name trans_meth name in
-  let json_name = Atd.Json.get_json_fname name an in
-  let unwrapped_type =
-    match kind with
-    | Required
-    | With_default -> e
-    | Optional ->
-        match e with
-        | Option (loc, e, an) -> e
-        | _ ->
-            A.error_at loc
-              (sprintf "the type of optional field '%s' should be of \
-                        the form 'xxx option'" name)
-  in
-  let else_body =
-    match kind with
-    | Required ->
-        sprintf "_atd_missing_json_field('%s', '%s')"
-          (single_esc py_class_name)
-          (single_esc json_name)
-    | Optional -> "None"
-    | With_default ->
-        match get_kotlin_default e an with
-        | Some x -> x
-        | None ->
-            A.error_at loc
-              (sprintf "missing default Python value for field '%s'"
-                 name)
-  in
-  sprintf "%s=%s(x['%s']) if '%s' in x else %s,"
-    python_name
-    (json_reader env unwrapped_type)
-    (single_esc json_name)
-    (single_esc json_name)
-    else_body
-
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
   let var_name = inst_var_name trans_meth name in
@@ -804,59 +736,42 @@ let record env ~class_decorators loc name (fields : field list) an =
   let inst_var_declarations =
     List.map (fun x -> Inline (inst_var_declaration env trans_meth x)) fields
   in
-  let json_object_body =
-    List.map (fun x ->
-      Inline (construct_json_field env trans_meth x)) fields in
-  let from_json_class_arguments =
-    List.map (fun x ->
-      Line (from_json_class_argument env trans_meth kt_class_name x)
-    ) fields in
   let from_json =
     [
-      Line "@classmethod";
-      Line (sprintf "def from_json(cls, x: Any) -> '%s':"
+      Line (sprintf "fun fromJson(x: JsonElement): %s {"
               (single_esc kt_class_name));
       Block [
-        Line "if isinstance(x, dict):";
-        Block [
-          Line "return cls(";
-          Block from_json_class_arguments;
-          Line ")"
-        ];
-        Line "else:";
-        Block [
-          Line (sprintf "_atd_bad_json('%s', x)"
-                  (single_esc kt_class_name))
-        ]
-      ]
+        Line "return Json.decodeFromJsonElement(serializer(), x)"
+      ];
+      Line "}";
     ]
   in
   let to_json =
     [
-      Line "def to_json(self) -> Any:";
+      Line "fun toJson(): JsonElement {";
       Block [
-        Line "res: Dict[str, Any] = {}";
-        Inline json_object_body;
-        Line "return res"
-      ]
+        Line "return Json.encodeToJsonElement(serializer(), this)"
+      ];
+      Line "}";
     ]
   in
   let from_json_string =
     [
-      Line "@classmethod";
-      Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
+      Line (sprintf "fun fromJsonString(x: String): %s {"
               (single_esc kt_class_name));
       Block [
-        Line "return cls.from_json(json.loads(x))"
-      ]
+        Line "return Json.decodeFromString(serializer(), x)";
+      ];
+      Line "}";
     ]
   in
   let to_json_string =
     [
-      Line "def to_json_string(self, **kw: Any) -> str:";
+      Line "fun toJsonString(): String {";
       Block [
-        Line "return json.dumps(self.to_json(), **kw)"
-      ]
+        Line "return Json.encodeToString(serializer(), this)"
+      ];
+      Line "}";
     ]
   in
   [
@@ -865,7 +780,7 @@ let record env ~class_decorators loc name (fields : field list) an =
     Block (spaced [Inline inst_var_declarations]);
     Line ") {";
     Block (spaced [
-      Line (sprintf {|"""Original type: %s = { ... }"""|} name);
+      Line (sprintf {|// Original type: %s = { ... }|} name);
       Inline from_json;
       Inline to_json;
       Inline from_json_string;
