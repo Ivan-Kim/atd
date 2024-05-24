@@ -108,7 +108,7 @@ let init_env () : env =
   *)
   let reserved_variables = [
     (* from typing *)
-    "Any"; "Callable"; "Dict"; "List"; "Optional"; "Tuple";
+    "Any"; "Callable"; "Map"; "List"; "Optional"; "Tuple";
 
     (* for use in json.dumps, json.loads etc. *)
     "json";
@@ -464,13 +464,13 @@ type assoc_kind =
 
 let assoc_kind loc (e : type_expr) an : assoc_kind =
   let json_repr = Atd.Json.get_json_list an in
-  let python_repr = Python_annot.get_python_assoc_repr an in
+  let python_repr = Kotlin_annot.get_kotlin_assoc_repr an in
   match e, json_repr, python_repr with
-  | Tuple (loc, [(_, key, _); (_, value, _)], an2), Array, Dict ->
+  | Tuple (loc, [(_, key, _); (_, value, _)], an2), Array, Map ->
       Array_dict (key, value)
   | Tuple (loc,
            [(_, Name (_, (_, "string", _), _), _); (_, value, _)], an2),
-    Object, Dict ->
+    Object, Map ->
       Object_dict value
   | Tuple (loc,
            [(_, Name (_, (_, "string", _), _), _); (_, value, _)], an2),
@@ -551,7 +551,7 @@ let rec get_default_default (e : type_expr) : string option =
   | Tvar _ -> None
 
 let get_kotlin_default (e : type_expr) (an : annot) : string option =
-  let user_default = Python_annot.get_python_default an in
+  let user_default = Kotlin_annot.get_kotlin_default an in
   match user_default with
   | Some s -> Some s
   | None -> get_default_default e
@@ -1057,9 +1057,7 @@ let sum env ~class_decorators loc name cases =
   ]
   |> double_spaced
 
-let get_class_decorators an =
-  let decorators = Python_annot.get_python_decorators an in
-  decorators @ ["Serializable"]
+let get_class_decorators an = ["Serializable"]
 
 let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
   if param <> [] then
@@ -1143,5 +1141,5 @@ let run_file src_path =
   in
   let full_module = Atd.Ast.use_only_specific_variants full_module in
   let (atd_head, atd_module) = full_module in
-  let head = Python_annot.get_python_json_text (snd atd_head) in
+  let head = Kotlin_annot.get_kotlin_json_text (snd atd_head) in
   to_file ~atd_filename:src_name ~head atd_module dst_path
