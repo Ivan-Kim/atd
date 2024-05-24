@@ -8,6 +8,10 @@ type assoc_repr =
   | List
   | Map
 
+type sumtype_repr =
+  | Sealed
+  | Enum
+
 let get_kotlin_default an : string option =
     Atd.Annot.get_opt_field
       ~parse:(fun s -> Some s)
@@ -23,6 +27,18 @@ let get_kotlin_assoc_repr an : assoc_repr =
       | _ -> None
     )
     ~default:List
+    ~sections:["kotlin"]
+    ~field:"repr"
+    an
+
+let get_kotlin_sumtype_repr an : sumtype_repr =
+  Atd.Annot.get_field
+    ~parse:(function
+      | "sealed" -> Some Sealed
+      | "enum" -> Some Enum
+      | _ -> None
+    )
+    ~default:Sealed
     ~sections:["kotlin"]
     ~field:"repr"
     an

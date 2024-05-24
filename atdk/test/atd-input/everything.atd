@@ -14,6 +14,12 @@ type frozen = [
   | B of int
 ]
 
+type enum_sumtype = [
+  | A
+  | B
+  | C
+] <kotlin repr="enum">
+
 type ('a, 'b) parametrized_record = {
   field_a: 'a;
   ~field_b: 'b list;

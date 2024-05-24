@@ -19,12 +19,26 @@ type assoc_repr =
   | List
   | Map
 
+(** Whether a sum type must be represented in Kotlin as sealed class or as an enum.
+    This is independent of the JSON representation.
+*)
+type sumtype_repr =
+  | Sealed
+  | Enum
+
 (** Inspect annotations placed on lists of pairs such as
     [(string * foo) list <kotlin repr="map">].
     Permissible values for the [repr] field are ["map"] and ["list"].
     The default is ["list"].
 *)
 val get_kotlin_assoc_repr : Atd.Annot.t -> assoc_repr
+
+(** Inspection of annotations placed on sum types such as
+    [type foo = A | B | C <kotlin repr="enum">].
+    Permissible values for the [repr] field are ["enum"] and ["sealed"].
+    The default is ["sealed"].
+*)
+val get_kotlin_sumtype_repr : Atd.Annot.t -> sumtype_repr
 
 (** Returns text the user wants to be inserted at the beginning of the
     Kotlin file such as imports. *)

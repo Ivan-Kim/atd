@@ -132,7 +132,7 @@ let init_env () : env =
   let method_names () =
     Atd.Unique_name.init
       ~reserved_identifiers:(
-        ["from_json"; "to_json";
+        ["fromJson"; "toJson";
          "fromJsonString"; "toJsonString"]
         @ keywords
       )
@@ -849,13 +849,12 @@ let alias_wrapper env ~class_decorators name type_expr =
     Line "}";
   ]
 
-let case_class env ~class_decorators type_name
+let case_class env type_name
     (loc, orig_name, unique_name, an, opt_e) =
   let json_name = Atd.Json.get_json_cons orig_name an in
   match opt_e with
   | None ->
       [
-        Inline class_decorators;
         Line (sprintf "class %s:" (trans env unique_name));
         Block [
           Line (sprintf {|"""Original type: %s = [ ... | %s | ... ]"""|}
@@ -883,7 +882,6 @@ let case_class env ~class_decorators type_name
       ]
   | Some e ->
       [
-        Inline class_decorators;
         Line (sprintf "class %s:" (trans env unique_name));
         Block [
           Line (sprintf {|"""Original type: %s = [ ... | %s of ... | ... ]"""|}
@@ -1047,7 +1045,7 @@ let sum env ~class_decorators loc name cases =
     ) cases
   in
   let case_classes =
-    List.map (fun x -> Inline (case_class env ~class_decorators name x)) cases
+    List.map (fun x -> Inline (case_class env name x)) cases
     |> double_spaced
   in
   let container_class = sum_container env ~class_decorators loc name cases in
@@ -1056,6 +1054,90 @@ let sum env ~class_decorators loc name cases =
     Inline container_class;
   ]
   |> double_spaced
+
+let enum env loc name cases =
+  let kt_class_name = class_name env name in
+  let cases =
+    List.map (fun (x : variant) ->
+      match x with
+      | Variant (loc, (orig_name, an), opt_e) ->
+          let unique_name = create_class_name env orig_name in
+          (loc, orig_name, unique_name, an, opt_e)
+      | Inherit _ -> assert false
+    ) cases
+  in
+  let cases0, cases1 =
+    List.partition (fun (loc, orig_name, unique_name, an, opt_e) ->
+      opt_e = None
+    ) cases
+  in
+  let cases0_block =
+    if cases0 <> [] then
+      cases0 |> List.mapi (fun i (loc, orig_name, unique_name, an, opt_e) ->
+      let json_name = Atd.Json.get_json_cons orig_name an in
+      let comma = if i + 1 <> List.length cases0 then "," else ";" in
+      Line (sprintf "%s%s" json_name comma);
+    )
+    else
+      []
+  in
+  let cases1_block =
+    if cases1 <> [] then
+      error_at loc "enums with parameters are not supported"
+    else
+      []
+  in
+  let from_json =
+    [
+      Line (sprintf "fun fromJson(x: JsonElement): %s {"
+              (single_esc kt_class_name));
+      Block [
+        Line "return Json.decodeFromJsonElement(serializer(), x)"
+      ];
+      Line "}";
+    ]
+  in
+  let to_json =
+    [
+      Line "fun toJson(): JsonElement {";
+      Block [
+        Line "return Json.encodeToJsonElement(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
+  let from_json_string =
+    [
+      Line (sprintf "fun fromJsonString(x: String): %s {"
+              (single_esc kt_class_name));
+      Block [
+        Line "return Json.decodeFromString(serializer(), x)";
+      ];
+      Line "}";
+    ]
+  in
+  let to_json_string =
+    [
+      Line "fun toJsonString(): String {";
+      Block [
+        Line "return Json.encodeToString(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
+  [
+    Line "@Serializable";
+    Line (sprintf "enum class %s {" kt_class_name);
+    Block (spaced [
+      Inline cases0_block;
+      Inline cases1_block;
+      Inline from_json;
+      Inline to_json;
+      Inline from_json_string;
+      Inline to_json_string;
+    ]);
+    Line "}";
+  ]
 
 let get_class_decorators an = ["Serializable"]
 
@@ -1069,7 +1151,9 @@ let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
   let rec unwrap e =
     match e with
     | Sum (loc, cases, an) ->
-        sum env ~class_decorators loc name cases
+        (match (Kotlin_annot.get_kotlin_sumtype_repr an) with
+        | Sealed -> sum env ~class_decorators loc name cases
+        | Enum -> enum env loc name cases)
     | Record (loc, fields, an) ->
         record env  ~class_decorators loc name fields an
     | Tuple _
