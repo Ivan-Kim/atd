@@ -1,7 +1,3 @@
-<kotlin text="// This was inserted by the user.">
-<kotlin json_kt.text="import kotlinx.serialization.*">
-<kotlin json_kt.text="import kotlinx.serialization.json.*">
-
 type kind = [
   | Root (* class name conflict *)
   | Thing of int
