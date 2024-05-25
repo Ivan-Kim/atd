@@ -592,118 +592,6 @@ let unwrap_field_type loc field_name kind e =
 let inst_var_name trans_meth field_name =
   trans_meth field_name
 
-let rec json_writer env e =
-  match e with
-  | Sum (loc, _, _) -> not_implemented loc "inline sum types"
-  | Record (loc, _, _) -> not_implemented loc "inline records"
-  | Tuple (loc, cells, an) -> tuple_writer env cells
-  | List (loc, e, an) ->
-      (match assoc_kind loc e an with
-       | Array_list ->
-           sprintf "_atd_write_list(%s)" (json_writer env e)
-       | Array_dict (key, value) ->
-           sprintf "_atd_write_assoc_dict_to_array(%s, %s)"
-             (json_writer env key) (json_writer env value)
-       | Object_dict value ->
-           sprintf "_atd_write_assoc_dict_to_object(%s)"
-             (json_writer env value)
-       | Object_list value ->
-           sprintf "_atd_write_assoc_list_to_object(%s)"
-             (json_writer env value)
-      )
-  | Option (loc, e, an) ->
-      sprintf "_atd_write_option(%s)" (json_writer env e)
-  | Nullable (loc, e, an) ->
-      sprintf "_atd_write_nullable(%s)" (json_writer env e)
-  | Shared (loc, e, an) -> not_implemented loc "shared"
-  | Wrap (loc, e, an) -> json_writer env e
-  | Name (loc, (loc2, name, []), an) ->
-      (match name with
-       | "bool" | "int" | "float" | "string" -> sprintf "_atd_write_%s" name
-       | "abstract" -> "{ it }"
-       | _ -> "{ x -> x.to_json() }")
-  | Name (loc, _, _) -> not_implemented loc "parametrized types"
-  | Tvar (loc, _) -> not_implemented loc "type variables"
-
-(*
-   Convert python tuple to json list
-
-   (lambda x: [write0(x[0]), write1(x[1])] if isinstance(x, tuple) else error())
-*)
-and tuple_writer env cells =
-  let len = List.length cells in
-  let tuple_body =
-    List.mapi (fun i (loc, e, an) ->
-      sprintf "%s(x[%i])" (json_writer env e) i
-    ) cells
-    |> String.concat ", "
-  in
-  sprintf "(lambda x: [%s] \
-           if isinstance(x, tuple) and len(x) == %d \
-           else _atd_bad_python('tuple of length %d', x))"
-    tuple_body
-    len len
-
-(*
-   Function value that can be applied to a JSON node, converting it
-   to the desired value.
-*)
-let rec json_reader env (e : type_expr) =
-  match e with
-  | Sum (loc, _, _) -> not_implemented loc "inline sum types"
-  | Record (loc, _, _) -> not_implemented loc "inline records"
-  | Tuple (loc, cells, an) -> tuple_reader env cells
-  | List (loc, e, an) ->
-      (* ATD lists of pairs can be represented as objects in JSON or
-         as dicts in Python. All 4 combinations are supported.
-         The default is to use JSON arrays and Python lists. *)
-      (match assoc_kind loc e an with
-       | Array_list ->
-           sprintf "_atd_read_list(%s)"
-             (json_reader env e)
-       | Array_dict (key, value) ->
-           sprintf "_atd_read_assoc_array_into_dict(%s, %s)"
-             (json_reader env key) (json_reader env value)
-       | Object_dict value ->
-           sprintf "_atd_read_assoc_object_into_dict(%s)"
-             (json_reader env value)
-       | Object_list value ->
-           sprintf "_atd_read_assoc_object_into_list(%s)"
-             (json_reader env value)
-      )
-  | Option (loc, e, an) ->
-      sprintf "_atd_read_option(%s)" (json_reader env e)
-  | Nullable (loc, e, an) ->
-      sprintf "_atd_read_nullable(%s)" (json_reader env e)
-  | Shared (loc, e, an) -> not_implemented loc "shared"
-  | Wrap (loc, e, an) -> json_reader env e
-  | Name (loc, (loc2, name, []), an) ->
-      (match name with
-       | "bool" | "int" | "float" | "string" -> sprintf "_atd_read_%s" name
-       | "abstract" -> "(lambda x: x)"
-       | _ -> sprintf "%s.from_json" (class_name env name))
-  | Name (loc, _, _) -> not_implemented loc "parametrized types"
-  | Tvar (loc, _) -> not_implemented loc "type variables"
-
-(*
-   Convert json list to python tuple
-
-   (lambda x: (read0(x[0]), read1(x[1])) if isinstance(x, list) else error())
-*)
-and tuple_reader env cells =
-  let len = List.length cells in
-  let tuple_body =
-    List.mapi (fun i (loc, e, an) ->
-      sprintf "%s(x[%i])" (json_reader env e) i
-    ) cells
-    |> String.concat ", "
-  in
-  sprintf "(lambda x: (%s) \
-           if isinstance(x, list) and len(x) == %d \
-           else _atd_bad_json('array of length %d', x))"
-    tuple_body
-    len len
-
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
   let var_name = inst_var_name trans_meth name in
@@ -818,7 +706,7 @@ let alias_wrapper env ~class_decorators name type_expr =
     Inline class_decorators;
     Line (sprintf "data class %s(%s) {" kt_class_name (sprintf "val wrapped: %s" value_type));
     Block [
-      Line (sprintf {|"""Original type: %s"""|} name);
+      Line (sprintf {|// Original type: %s|} name);
       Line "";
       Line (sprintf "fun fromJson(x: JsonElement): %s {"
               (single_esc kt_class_name));
@@ -851,188 +739,31 @@ let alias_wrapper env ~class_decorators name type_expr =
 
 let case_class env type_name
     (loc, orig_name, unique_name, an, opt_e) =
+  let kt_class_name = class_name env type_name in
   let json_name = Atd.Json.get_json_cons orig_name an in
+  let annotations = 
+    if json_name <> orig_name then [
+      Line "@Serializable";
+      Line (sprintf "@SerialName(\"%s\")" json_name)
+    ]
+    else [Line "@Serializable"];
+  in
   match opt_e with
   | None ->
       [
-        Line (sprintf "class %s:" (trans env unique_name));
-        Block [
-          Line (sprintf {|"""Original type: %s = [ ... | %s | ... ]"""|}
-                  type_name
-                  orig_name);
-          Line "";
-          Line "@property";
-          Line "def kind(self) -> str:";
-          Block [
-            Line {|"""Name of the class representing this variant."""|};
-            Line (sprintf "return '%s'" (trans env unique_name))
-          ];
-          Line "";
-          Line "@staticmethod";
-          Line "def to_json() -> Any:";
-          Block [
-            Line (sprintf "return '%s'" (single_esc json_name))
-          ];
-          Line "";
-          Line "def to_json_string(self, **kw: Any) -> str:";
-          Block [
-            Line "return json.dumps(self.to_json(), **kw)"
-          ]
-        ]
+        Inline annotations;
+        Line (sprintf "data object %s: %s()" (trans env unique_name) kt_class_name);
+        Line (sprintf {|// Original type: %s = [ ... | %s | ... ]|}
+                type_name orig_name);
       ]
   | Some e ->
       [
-        Line (sprintf "class %s:" (trans env unique_name));
-        Block [
-          Line (sprintf {|"""Original type: %s = [ ... | %s of ... | ... ]"""|}
-                  type_name
-                  orig_name);
-          Line "";
-          Line (sprintf "value: %s" (type_name_of_expr env e));
-          Line "";
-          Line "@property";
-          Line "def kind(self) -> str:";
-          Block [
-            Line {|"""Name of the class representing this variant."""|};
-            Line (sprintf "return '%s'" (trans env unique_name))
-          ];
-          Line "";
-          Line "def to_json(self) -> Any:";
-          Block [
-            Line (sprintf "return ['%s', %s(self.value)]"
-                    (single_esc json_name)
-                    (json_writer env e))
-          ];
-          Line "";
-          Line "def to_json_string(self, **kw: Any) -> str:";
-          Block [
-            Line "return json.dumps(self.to_json(), **kw)"
-          ]
-        ]
+        Inline annotations;
+        Line (sprintf "data class %s(val value: %s): %s()" 
+                (trans env unique_name) (type_name_of_expr env e) kt_class_name);
+        Line (sprintf {|// Original type: %s = [ ... | %s of ... | ... ]|}
+                type_name orig_name);
       ]
-
-let read_cases0 env loc name cases0 =
-  let ifs =
-    cases0
-    |> List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      let json_name = Atd.Json.get_json_cons orig_name an in
-      Inline [
-        Line (sprintf "if x == '%s':" (single_esc json_name));
-        Block [
-          Line (sprintf "return cls(%s())" (trans env unique_name))
-        ]
-      ]
-    )
-  in
-  [
-    Inline ifs;
-    Line (sprintf "_atd_bad_json('%s', x)"
-            (class_name env name |> single_esc))
-  ]
-
-let read_cases1 env loc name cases1 =
-  let ifs =
-    cases1
-    |> List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      let e =
-        match opt_e with
-        | None -> assert false
-        | Some x -> x
-      in
-      let json_name = Atd.Json.get_json_cons orig_name an in
-      Inline [
-        Line (sprintf "if cons == '%s':" (single_esc json_name));
-        Block [
-          Line (sprintf "return cls(%s(%s(x[1])))"
-                  (trans env unique_name)
-                  (json_reader env e))
-        ]
-      ]
-    )
-  in
-  [
-    Inline ifs;
-    Line (sprintf "_atd_bad_json('%s', x)"
-            (class_name env name |> single_esc))
-  ]
-
-let sum_container env ~class_decorators loc name cases =
-  let py_class_name = class_name env name in
-  let type_list =
-    List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      trans env unique_name
-    ) cases
-    |> String.concat ", "
-  in
-  let cases0, cases1 =
-    List.partition (fun (loc, orig_name, unique_name, an, opt_e) ->
-      opt_e = None
-    ) cases
-  in
-  let cases0_block =
-    if cases0 <> [] then
-      [
-        Line "if isinstance(x, str):";
-        Block (read_cases0 env loc name cases0)
-      ]
-    else
-      []
-  in
-  let cases1_block =
-    if cases1 <> [] then
-      [
-        Line "if isinstance(x, List) and len(x) == 2:";
-        Block [
-          Line "cons = x[0]";
-          Inline (read_cases1 env loc name cases1)
-        ]
-      ]
-    else
-      []
-  in
-  [
-    Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
-    Block [
-      Line (sprintf {|"""Original type: %s = [ ... ]"""|} name);
-      Line "";
-      Line (sprintf "value: Union[%s]" type_list);
-      Line "";
-      Line "@property";
-      Line "def kind(self) -> str:";
-      Block [
-        Line {|"""Name of the class representing this variant."""|};
-        Line (sprintf "return self.value.kind")
-      ];
-      Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
-      Block [
-        Inline cases0_block;
-        Inline cases1_block;
-        Line (sprintf "_atd_bad_json('%s', x)"
-                (single_esc (class_name env name)))
-      ];
-      Line "";
-      Line "def to_json(self) -> Any:";
-      Block [
-        Line "return self.value.to_json()";
-      ];
-      Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
-      Block [
-        Line "return cls.from_json(json.loads(x))"
-      ];
-      Line "";
-      Line "def to_json_string(self, **kw: Any) -> str:";
-      Block [
-        Line "return json.dumps(self.to_json(), **kw)"
-      ]
-    ]
-  ]
 
 let sum env ~class_decorators loc name cases =
   let cases =
@@ -1046,14 +777,60 @@ let sum env ~class_decorators loc name cases =
   in
   let case_classes =
     List.map (fun x -> Inline (case_class env name x)) cases
-    |> double_spaced
+    |> spaced
   in
-  let container_class = sum_container env ~class_decorators loc name cases in
+  let kt_class_name = class_name env name in
+  let from_json =
+    [
+      Line (sprintf "fun fromJson(x: JsonElement): %s {"
+              (single_esc kt_class_name));
+      Block [
+        Line "return Json.decodeFromJsonElement(serializer(), x)"
+      ];
+      Line "}";
+    ]
+  in
+  let to_json =
+    [
+      Line "fun toJson(): JsonElement {";
+      Block [
+        Line "return Json.encodeToJsonElement(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
+  let from_json_string =
+    [
+      Line (sprintf "fun fromJsonString(x: String): %s {"
+              (single_esc kt_class_name));
+      Block [
+        Line "return Json.decodeFromString(serializer(), x)";
+      ];
+      Line "}";
+    ]
+  in
+  let to_json_string =
+    [
+      Line "fun toJsonString(): String {";
+      Block [
+        Line "return Json.encodeToString(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
   [
-    Inline case_classes;
-    Inline container_class;
+    Line "@Serializable";
+    Line (sprintf "sealed class %s {" kt_class_name);
+    Block (spaced [
+      Line (sprintf {|// Original type: %s = [ ... ]|} name);
+      Inline case_classes;
+      Inline from_json;
+      Inline to_json;
+      Inline from_json_string;
+      Inline to_json_string;
+    ]);
+    Line "}";
   ]
-  |> double_spaced
 
 let enum env loc name cases =
   let kt_class_name = class_name env name in
