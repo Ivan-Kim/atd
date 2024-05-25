@@ -21,22 +21,21 @@ type env = {
   translate_inst_variable: unit -> (string -> string);
 }
 
-let annot_schema_python : Atd.Annot.schema_section =
+let annot_schema_kotlin : Atd.Annot.schema_section =
   {
-    section = "python";
+    section = "kotlin";
     fields = [
       Module_head, "text";
-      Module_head, "json_py.text";
-      Type_def, "decorator";
+      Module_head, "json_kt.text";
       Type_expr, "repr";
       Field, "default";
     ]
   }
 
 let annot_schema : Atd.Annot.schema =
-  annot_schema_python :: Atd.Json.annot_schema_json
+  annot_schema_kotlin :: Atd.Json.annot_schema_json
 
-(* Translate a preferred variable name into an available Python identifier. *)
+(* Translate a preferred variable name into an available Kotlin identifier. *)
 let trans env id =
   env.translate_variable id
 
@@ -44,7 +43,7 @@ let trans env id =
    Convert an ascii string to CamelCase.
    Note that this gets rid of leading and trailing underscores.
 *)
-let to_camel_case s =
+let to_camel_case capitalize s =
   let buf = Buffer.create (String.length s) in
   let start_word = ref true in
   for i = 0 to String.length s - 1 do
@@ -52,7 +51,8 @@ let to_camel_case s =
     | '_' ->
         start_word := true
     | 'a'..'z' as c when !start_word ->
-        Buffer.add_char buf (Char.uppercase_ascii c);
+        let cap = if (capitalize || i <> 0) then Char.uppercase_ascii else Char.lowercase_ascii in
+        Buffer.add_char buf (cap c);
         start_word := false
     | c ->
         Buffer.add_char buf c;
@@ -69,7 +69,7 @@ let to_camel_case s =
 
 (* Use CamelCase as recommended by Kotlin style guide. *)
 let class_name env id =
-  trans env (to_camel_case id)
+  trans env (to_camel_case true id)
 
 (*
    Create a class identifier that hasn't been seen yet.
@@ -78,7 +78,7 @@ let class_name env id =
    underscores being added for disambiguation).
 *)
 let create_class_name env name =
-  let preferred_id = to_camel_case name in
+  let preferred_id = to_camel_case true name in
   env.create_variable preferred_id
 
 let init_env () : env =
@@ -108,7 +108,7 @@ let init_env () : env =
   *)
   let reserved_variables = [
     (* from typing *)
-    "Any"; "Callable"; "Map"; "List"; "Optional"; "Tuple";
+    "Any"; "Callable"; "Map"; "List"; "Optional"; "Pair"; "Triple";
 
     (* for use in json.dumps, json.loads etc. *)
     "json";
@@ -229,8 +229,8 @@ type assoc_kind =
 
 let assoc_kind loc (e : type_expr) an : assoc_kind =
   let json_repr = Atd.Json.get_json_list an in
-  let python_repr = Kotlin_annot.get_kotlin_assoc_repr an in
-  match e, json_repr, python_repr with
+  let kotlin_repr = Kotlin_annot.get_kotlin_assoc_repr an in
+  match e, json_repr, kotlin_repr with
   | Tuple (loc, [(_, key, _); (_, value, _)], an2), Array, Map ->
       Array_dict (key, value)
   | Tuple (loc,
@@ -252,7 +252,7 @@ let kt_type_name env (name : string) =
   | "int" -> "Int"
   | "float" -> "Double"
   | "string" -> "String"
-  | "abstract" -> "Any"
+  | "abstract" -> "JsonElement"
   | user_defined -> class_name env user_defined
 
 let rec type_name_of_expr env (e : type_expr) : string =
@@ -335,7 +335,7 @@ let has_no_class_inst_prop_default
              or the default value is known to be mutable. *)
           true
 
-(* If the field is '?foo: bar option', its python or json value has type
+(* If the field is '?foo: bar option', its kotlin or json value has type
    'bar' rather than 'bar option'. *)
 let unwrap_field_type loc field_name kind e =
   match kind with
@@ -359,7 +359,7 @@ let inst_var_name trans_meth field_name =
 
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
-  let var_name = inst_var_name trans_meth name in
+  let var_name = inst_var_name trans_meth name |> to_camel_case false in
   let type_name = type_name_of_expr env e in
   let unwrapped_e = unwrap_field_type loc name kind e in
   let default =
@@ -738,11 +738,11 @@ let to_file ~atd_filename ~head (items : A.module_body) dst_path =
   let env = init_env () in
   reserve_good_class_names env items;
   let head = List.map (fun s -> Line s) head in
-  let python_defs =
+  let kotlin_defs =
     Atd.Util.tsort items
     |> List.map (fun x -> Inline (definition_group ~atd_filename env x))
   in
-  Line (fixed_size_preamble atd_filename) :: Inline head :: python_defs
+  Line (fixed_size_preamble atd_filename) :: Inline head :: kotlin_defs
   |> double_spaced
   |> Indent.to_file ~indent:4 dst_path
 
