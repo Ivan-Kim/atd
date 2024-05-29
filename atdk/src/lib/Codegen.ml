@@ -375,6 +375,67 @@ let inst_var_declaration
     Line (sprintf "val %s: %s%s," var_name type_name default)
   ]
 
+let to_json_methods name =
+  let to_json =
+    [
+      Line "fun toJson(): JsonElement {";
+      Block [
+        Line "return Json.encodeToJsonElement(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
+  let to_json_string =
+    [
+      Line "fun toJsonString(): String {";
+      Block [
+        Line "return Json.encodeToString(serializer(), this)"
+      ];
+      Line "}";
+    ]
+  in
+  spaced [
+    Line (sprintf {|// Original type: %s = { ... }|} name);
+    Inline to_json;
+    Inline to_json_string;
+  ]
+
+  let from_json_methods env name =
+    let kt_class_name = class_name env name in
+    let from_json =
+      [
+        Line (sprintf "fun fromJson(x: JsonElement): %s {"
+                (single_esc kt_class_name));
+        Block [
+          Line "return Json.decodeFromJsonElement(serializer(), x)"
+        ];
+        Line "}";
+      ]
+    in
+    let from_json_string =
+      [
+        Line (sprintf "fun fromJsonString(x: String): %s {"
+                (single_esc kt_class_name));
+        Block [
+          Line "return Json.decodeFromString(serializer(), x)";
+        ];
+        Line "}";
+      ]
+    in
+    spaced [
+      Block from_json;
+      Block from_json_string;
+    ]
+
+  let json_methods env name =
+    Block [
+      Inline (to_json_methods name);
+      Line "";
+      Line "companion object {";
+      Inline (from_json_methods env name);
+      Line "}";
+    ]
+
 let record env ~class_decorators loc name (fields : field list) an =
   let kt_class_name = class_name env name in
   let trans_meth = env.translate_inst_variable () in
@@ -395,56 +456,12 @@ let record env ~class_decorators loc name (fields : field list) an =
   let inst_var_declarations =
     List.map (fun x -> Inline (inst_var_declaration env trans_meth x)) fields
   in
-  let from_json =
-    [
-      Line (sprintf "fun fromJson(x: JsonElement): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromJsonElement(serializer(), x)"
-      ];
-      Line "}";
-    ]
-  in
-  let to_json =
-    [
-      Line "fun toJson(): JsonElement {";
-      Block [
-        Line "return Json.encodeToJsonElement(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
-  let from_json_string =
-    [
-      Line (sprintf "fun fromJsonString(x: String): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromString(serializer(), x)";
-      ];
-      Line "}";
-    ]
-  in
-  let to_json_string =
-    [
-      Line "fun toJsonString(): String {";
-      Block [
-        Line "return Json.encodeToString(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
   [
     Inline class_decorators;
     Line (sprintf "data class %s(" kt_class_name);
     Block (spaced [Inline inst_var_declarations]);
     Line ") {";
-    Block (spaced [
-      Line (sprintf {|// Original type: %s = { ... }|} name);
-      Inline from_json;
-      Inline to_json;
-      Inline from_json_string;
-      Inline to_json_string;
-    ]);
+    json_methods env name;
     Line "}";
   ]
 
@@ -470,35 +487,7 @@ let alias_wrapper env ~class_decorators name type_expr =
   [
     Inline class_decorators;
     Line (sprintf "data class %s(%s) {" kt_class_name (sprintf "val wrapped: %s" value_type));
-    Block [
-      Line (sprintf {|// Original type: %s|} name);
-      Line "";
-      Line (sprintf "fun fromJson(x: JsonElement): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromJsonElement(serializer(), x)";
-      ];
-      Line "}";
-      Line "";
-      Line "fun toJson(): JsonElement {";
-      Block [
-        Line "return Json.encodeToJsonElement(serializer(), this)"
-      ];
-      Line "}";
-      Line "";
-      Line (sprintf "fun fromJsonString(x: String): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromString(serializer(), x)"
-      ];
-      Line "}";
-      Line "";
-      Line "fun toJsonString(): String {";
-      Block [
-        Line "return Json.encodeToString(serializer(), this)"
-      ];
-      Line "}";
-    ];
+    json_methods env name;
     Line "}";
   ]
 
@@ -545,55 +534,14 @@ let sum env ~class_decorators loc name cases =
     |> spaced
   in
   let kt_class_name = class_name env name in
-  let from_json =
-    [
-      Line (sprintf "fun fromJson(x: JsonElement): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromJsonElement(serializer(), x)"
-      ];
-      Line "}";
-    ]
-  in
-  let to_json =
-    [
-      Line "fun toJson(): JsonElement {";
-      Block [
-        Line "return Json.encodeToJsonElement(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
-  let from_json_string =
-    [
-      Line (sprintf "fun fromJsonString(x: String): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromString(serializer(), x)";
-      ];
-      Line "}";
-    ]
-  in
-  let to_json_string =
-    [
-      Line "fun toJsonString(): String {";
-      Block [
-        Line "return Json.encodeToString(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
   [
     Line "@Serializable";
     Line (sprintf "sealed class %s {" kt_class_name);
     Block (spaced [
       Line (sprintf {|// Original type: %s = [ ... ]|} name);
       Inline case_classes;
-      Inline from_json;
-      Inline to_json;
-      Inline from_json_string;
-      Inline to_json_string;
     ]);
+    json_methods env name;
     Line "}";
   ]
 
@@ -629,55 +577,14 @@ let enum env loc name cases =
     else
       []
   in
-  let from_json =
-    [
-      Line (sprintf "fun fromJson(x: JsonElement): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromJsonElement(serializer(), x)"
-      ];
-      Line "}";
-    ]
-  in
-  let to_json =
-    [
-      Line "fun toJson(): JsonElement {";
-      Block [
-        Line "return Json.encodeToJsonElement(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
-  let from_json_string =
-    [
-      Line (sprintf "fun fromJsonString(x: String): %s {"
-              (single_esc kt_class_name));
-      Block [
-        Line "return Json.decodeFromString(serializer(), x)";
-      ];
-      Line "}";
-    ]
-  in
-  let to_json_string =
-    [
-      Line "fun toJsonString(): String {";
-      Block [
-        Line "return Json.encodeToString(serializer(), this)"
-      ];
-      Line "}";
-    ]
-  in
   [
     Line "@Serializable";
     Line (sprintf "enum class %s {" kt_class_name);
     Block (spaced [
       Inline cases0_block;
       Inline cases1_block;
-      Inline from_json;
-      Inline to_json;
-      Inline from_json_string;
-      Inline to_json_string;
     ]);
+    json_methods env name;
     Line "}";
   ]
 

@@ -25,20 +25,22 @@ data class RecursiveClass(
 ) {
     // Original type: recursive_class = { ... }
 
-    fun fromJson(x: JsonElement): RecursiveClass {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
-
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): RecursiveClass {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): RecursiveClass {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): RecursiveClass {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -64,65 +66,72 @@ sealed class Kind {
     @SerialName("!!!")
     data class Amaze(val value: List<String>): Kind()
     // Original type: kind = [ ... | Amaze of ... | ... ]
-
-    fun fromJson(x: JsonElement): Kind {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: kind = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): Kind {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): Kind {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): Kind {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
 
 @Serializable
 data class Alias(val wrapped: List<Int>) {
-    // Original type: alias
-
-    fun fromJson(x: JsonElement): Alias {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: alias = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): Alias {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): Alias {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): Alias {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
 
 @Serializable
 data class KindParametrizedTuple(val wrapped: Triple<Kind, Kind, Int>) {
-    // Original type: _kind_parametrized_tuple
-
-    fun fromJson(x: JsonElement): KindParametrizedTuple {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: _kind_parametrized_tuple = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): KindParametrizedTuple {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): KindParametrizedTuple {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): KindParametrizedTuple {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -134,20 +143,22 @@ data class IntFloatParametrizedRecord(
 ) {
     // Original type: _int_float_parametrized_record = { ... }
 
-    fun fromJson(x: JsonElement): IntFloatParametrizedRecord {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
-
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): IntFloatParametrizedRecord {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): IntFloatParametrizedRecord {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): IntFloatParametrizedRecord {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -176,42 +187,46 @@ data class Root(
 ) {
     // Original type: root = { ... }
 
-    fun fromJson(x: JsonElement): Root {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
-
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): Root {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): Root {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): Root {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
 
 @Serializable
 data class Pair_(val wrapped: Pair<String, Int>) {
-    // Original type: pair
-
-    fun fromJson(x: JsonElement): Pair_ {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: pair = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): Pair_ {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): Pair_ {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): Pair_ {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -227,21 +242,24 @@ sealed class Frozen {
     @Serializable
     data class B(val value: Int): Frozen()
     // Original type: frozen = [ ... | B of ... | ... ]
-
-    fun fromJson(x: JsonElement): Frozen {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: frozen = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): Frozen {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): Frozen {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): Frozen {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -251,21 +269,24 @@ enum class EnumSumtype {
     A,
     B,
     C;
-
-    fun fromJson(x: JsonElement): EnumSumtype {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
+    // Original type: enum_sumtype = { ... }
 
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): EnumSumtype {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): EnumSumtype {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): EnumSumtype {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
 
@@ -276,19 +297,21 @@ data class DefaultList(
 ) {
     // Original type: default_list = { ... }
 
-    fun fromJson(x: JsonElement): DefaultList {
-        return Json.decodeFromJsonElement(serializer(), x)
-    }
-
     fun toJson(): JsonElement {
         return Json.encodeToJsonElement(serializer(), this)
     }
 
-    fun fromJsonString(x: String): DefaultList {
-        return Json.decodeFromString(serializer(), x)
-    }
-
     fun toJsonString(): String {
         return Json.encodeToString(serializer(), this)
+    }
+
+    companion object {
+        fun fromJson(x: JsonElement): DefaultList {
+            return Json.decodeFromJsonElement(serializer(), x)
+        }
+
+        fun fromJsonString(x: String): DefaultList {
+            return Json.decodeFromString(serializer(), x)
+        }
     }
 }
