@@ -3,11 +3,9 @@
 ;
 (rule
   (targets
-    allcaps.kt
     everything.kt
   )
   (deps
-    ../atd-input/ALLCAPS.atd
     ../atd-input/everything.atd
   )
   (action
@@ -21,7 +19,6 @@
  (package atdk)
  (deps
   everything.kt
-  (glob_files *.kt))
- (action
-  (progn
-   (run kotlinc -version))))
+  (glob_files *.kt)
+  (glob_files *.jar))
+ (action (run ./run_test.sh)))
