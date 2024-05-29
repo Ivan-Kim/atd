@@ -1,5 +1,5 @@
 #
-# Python-mypy/JSON backend
+# Kotlin/JSON backend
 #
 
 DUNE ?= dune
@@ -18,13 +18,13 @@ build:
 test:
 	$(MAKE) clean-for-dune
 	$(DUNE) runtest -f; status=$$?; \
-	  ln -s ../../../_build/default/atdk/test/python-tests/everything.py \
-	    test/python-tests/everything.py && \
+	  ln -s ../../../_build/default/atdk/test/kotlin-tests/everything.kt \
+	    test/kotlin-tests/everything.kt && \
 	  exit "$$status"
 
 .PHONY: clean-for-dune
 clean-for-dune:
-	rm -f test/python-tests/everything.py
+	rm -f test/kotlin-tests/everything.kt
 
 .PHONY: clean
 clean:

@@ -20,10 +20,8 @@
  (alias runtest)
  (package atdk)
  (deps
-  everything.py
-  (glob_files *.py))
+  everything.kt
+  (glob_files *.kt))
  (action
   (progn
-   (run python3 -m flake8 .)
-   (run python3 -m mypy --strict .)
-   (run python3 -m pytest .))))
+   (run kotlinc -version))))
