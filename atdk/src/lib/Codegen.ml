@@ -571,8 +571,9 @@ let enum env loc name cases =
     if cases0 <> [] then
       cases0 |> List.mapi (fun i (loc, orig_name, unique_name, an, opt_e) ->
       let json_name = Atd.Json.get_json_cons orig_name an in
+      let uppercased_name = String.uppercase_ascii json_name in
       let comma = if i + 1 <> List.length cases0 then "," else ";" in
-      Line (sprintf "%s%s" json_name comma);
+      Line (sprintf "@SerialName(\"%s\") %s%s" json_name uppercased_name comma);
     )
     else
       []
