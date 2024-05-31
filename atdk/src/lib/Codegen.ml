@@ -49,7 +49,8 @@ let to_camel_case capitalize s =
   for i = 0 to String.length s - 1 do
     match s.[i] with
     | '_' ->
-        start_word := true
+        if (i = String.length s - 1) then Buffer.add_char buf '_'
+        else start_word := true
     | 'a'..'z' as c when !start_word ->
         let cap = if (capitalize || i <> 0) then Char.uppercase_ascii else Char.lowercase_ascii in
         Buffer.add_char buf (cap c);
@@ -367,6 +368,7 @@ let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
   let var_name = inst_var_name trans_meth name |> to_camel_case false in
   let type_name = type_name_of_expr env e in
+  let json_name = Atd.Json.get_json_cons var_name an in
   let unwrapped_e = unwrap_field_type loc name kind e in
   let default =
     match kind with
@@ -377,9 +379,10 @@ let inst_var_declaration
         | None -> ""
         | Some x -> sprintf " = %s" x
   in
-  [
-    Line (sprintf "val %s: %s%s," var_name type_name default)
-  ]
+  let serial_name = if var_name <> json_name then
+  [ Line (sprintf "@SerialName(\"%s\")" json_name) ] else []
+  in
+  serial_name @ [Line (sprintf "val %s: %s%s," var_name type_name default)]
 
 let to_json_methods name =
   let to_json =
