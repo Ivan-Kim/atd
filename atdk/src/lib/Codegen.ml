@@ -54,6 +54,9 @@ let to_camel_case capitalize s =
         let cap = if (capitalize || i <> 0) then Char.uppercase_ascii else Char.lowercase_ascii in
         Buffer.add_char buf (cap c);
         start_word := false
+    | '\'' ->
+          Buffer.add_char buf '_';
+          start_word := false
     | c ->
         Buffer.add_char buf c;
         start_word := false
