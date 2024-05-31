@@ -1,0 +1,175 @@
+type json <ocaml module="FsData.Json" t="t"> = abstract
+
+type timestamp = string wrap <ocaml module="FsWrap.Timestamp_str">
+
+type url = string wrap <ocaml module="FsWrap.Url">
+
+type domain = string
+
+type ('ok, 'error) result <ocaml predef module="FsWrap.Result" t="t"> = [
+  | Ok of 'ok
+  | Error of 'error
+] <ocaml repr="classic">
+
+type search_type = [
+  | Web <json name="web">
+  | News <json name="news">
+  | Images <json name="images">
+]
+
+type time = string
+
+type correction = [
+  | Suggestion of string
+  | Correction of string
+] <ocaml repr="classic">
+
+type plain_result = (string, string) result
+
+type img = {
+  title <json name="Title">: string;
+  url <json name="Url">: string;
+}
+
+type wikipedia = {
+  ?image <json name="Image">: img nullable;
+  url: url;
+  title <json name="Title">:  string;
+  subtitle <json name="Subtitle">: string;
+  snippet <json name="Snippet">: string;
+  data <json name="Data">: json;
+}
+
+type reference = {
+  index: int;
+  url: url;
+  visual_url: string;
+  ?title: string option;
+}
+
+type answer_part = {
+  text: string;
+  ?annotation_number: int option;
+  ?reference_text: string option;
+}
+
+type paragraph = {
+  paragraph: answer_part list;
+}
+
+type summary = {
+  answer: paragraph list;
+  ?score: float nullable;
+  references: reference list;
+}
+
+
+type short_sitelink = {
+  url : url;
+  title : string;
+}
+
+type sitelink = {
+  url : url;
+  ?visual_url : string nullable;
+  title : string;
+  snippet : string;
+}
+
+type sitelinks = {
+  ?short : short_sitelink list nullable;
+  ?full : sitelink list nullable;
+  domain : domain;
+}
+
+type result_icon = [
+  | NotSecure
+  ]
+
+type result_type' = [
+  | Organic
+  | Sitelink
+  | Alt_search_engine
+  | News
+  ]
+
+type result_type = [ inherit result_type' | Image | Featured_news | Featured_images ]
+
+type web =  {
+  url: url;
+  title: string;
+  type_ <json name="type"> : result_type;
+  snippet: string;
+  ?visual_url : string nullable;
+  ?icon : result_icon nullable;
+  ?protocol : string nullable;
+  ?first_seen: timestamp nullable;
+  ?sitelinks: sitelinks nullable;
+}
+
+type webs' = {
+  ?wikipedia: wikipedia nullable;
+  ?correction: correction nullable;
+  results: web list;
+  ?featured_news : new' list nullable;
+  ?featured_images : image list nullable;
+  ?total : int nullable;
+  stats: json;
+  search_id: string;
+}
+
+type webs = (webs', string) result
+
+type new' = {
+  url: url;
+  title: string;
+  type_ <json name="type"> : result_type;
+  snippet: string;
+  ?img : string nullable;
+  ?srcset : string nullable;
+  ?visual_url : string nullable;
+  ?icon : result_icon nullable;
+  ?protocol : string nullable;
+  ?first_seen: timestamp nullable;
+  ?sitelinks: sitelinks nullable;
+}
+
+type news' = {
+  ?correction: correction nullable;
+  results: new' list;
+  ?total : int nullable;
+  stats: json;
+  search_id: string;
+}
+
+type news = (news', string) result
+
+type summary' = (summary, string) result
+
+type has_summary = (bool, string) result
+
+type 'a webs'' = {
+  ?wikipedia: wikipedia nullable;
+  ?correction: correction nullable;
+  results: 'a;
+  ?total : int nullable;
+  stats: json;
+  search_id: string;
+}
+
+type image = {
+  type_ <json name="type"> : result_type;
+  image_id :string;
+  host_page : url;
+  title: string;
+  visual_url : string;
+  srcset : string;
+  src : string;
+  width : int;
+  height : int;
+  score : float;
+}
+
+type images' = image list webs''
+
+type images = (images', string) result

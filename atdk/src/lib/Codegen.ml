@@ -108,20 +108,19 @@ let init_env () : env =
   *)
   let reserved_variables = [
     (* from typing *)
-    "Any"; "Callable"; "Map"; "List"; "Optional"; "Pair"; "Triple";
+    "Map"; "List"; "Pair"; "Triple";
 
-    (* for use in json.dumps, json.loads etc. *)
-    "json";
+    (* for use in kotlinx.serialization types *)
+    "Json"; "JsonElement";
 
     (* exceptions *)
-    "ValueError";
+    "SerializationException";
 
     (* used to check JSON node type *)
-    "isinstance";
-    "bool"; "int"; "float"; "str"; "dict"; "list"; "tuple";
+    "Boolean"; "Int"; "Double"; "String";
 
     (* other built-in variables *)
-    "self"; "cls"; "repr";
+    "this";
   ] in
   let variables =
     Atd.Unique_name.init
