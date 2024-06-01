@@ -366,7 +366,8 @@ let inst_var_name trans_meth field_name =
 
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
-  let var_name = inst_var_name trans_meth name |> to_camel_case false in
+  let var_name = inst_var_name trans_meth name in
+  let camel_cased_var_name = var_name |> to_camel_case false in
   let type_name = type_name_of_expr env e in
   let json_name = Atd.Json.get_json_cons var_name an in
   let unwrapped_e = unwrap_field_type loc name kind e in
@@ -380,9 +381,12 @@ let inst_var_declaration
         | Some x -> sprintf " = %s" x
   in
   let serial_name = if var_name <> json_name then
-  [ Line (sprintf "@SerialName(\"%s\")" json_name) ] else []
+  [ Line (sprintf "@SerialName(\"%s\")" json_name) ] 
+  else if var_name <> camel_cased_var_name then 
+  [ Line (sprintf "@SerialName(\"%s\")" var_name) ]
+  else []
   in
-  serial_name @ [Line (sprintf "val %s: %s%s," var_name type_name default)]
+  serial_name @ [Line (sprintf "val %s: %s%s," camel_cased_var_name type_name default)]
 
 let to_json_methods name =
   let to_json =
