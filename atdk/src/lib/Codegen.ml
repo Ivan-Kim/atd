@@ -219,9 +219,6 @@ let spaced ?(spacer = [Line ""]) (blocks : B.node list) : B.node list =
   in
   spaced blocks
 
-let double_spaced blocks =
-  spaced ~spacer:[Line ""; Line ""] blocks
-
 (*
    Representations of ATD type '(string * value) list' in JSON and Kotlin.
    Key type or value type are provided when it's useful.
@@ -664,7 +661,7 @@ let to_file ~atd_filename ~head (items : A.module_body) dst_path =
     |> List.map (fun x -> Inline (definition_group ~atd_filename env x))
   in
   Line (fixed_size_preamble atd_filename) :: Inline head :: kotlin_defs
-  |> double_spaced
+  |> spaced
   |> Indent.to_file ~indent:4 dst_path
 
 let run_file src_path =
