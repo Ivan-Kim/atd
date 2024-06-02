@@ -58,3 +58,27 @@ let get_kotlin_json_text an : string list =
     ~sections:["kotlin"]
     ~field:"json_kt.text"
     an
+
+let get_kotlin_module an : string option =
+  let o = Atd.Annot.get_opt_field
+    ~parse:(fun s -> Some s)
+    ~sections:["kotlin"]
+    ~field:"module"
+    an
+  in
+  match o with
+  | Some s -> Some s
+  | None ->
+    Atd.Annot.get_opt_field
+      ~parse:(fun s -> Some s)
+      ~sections:["kotlin"]
+      ~field:"from" 
+      an
+      
+let get_kotlin_t an default: string =
+  Atd.Annot.get_field
+    ~parse:(fun s -> Some s)
+    ~default:default
+    ~sections:["kotlin"]
+    ~field:"t"
+    an

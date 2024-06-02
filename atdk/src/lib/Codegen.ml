@@ -25,6 +25,8 @@ let annot_schema_kotlin : Atd.Annot.schema_section =
   {
     section = "kotlin";
     fields = [
+      Type_def, "module";
+      Type_def, "t";
       Module_head, "text";
       Module_head, "json_kt.text";
       Type_expr, "repr";
@@ -501,6 +503,13 @@ let alias_wrapper env ~class_decorators name type_expr =
     Line "}";
   ]
 
+let type_alias env module_annot t_name name =
+  let kt_class_name = class_name env name in
+  let library_name = Option.get module_annot in
+  [
+    Line (sprintf "typealias %s = %s.%s" kt_class_name library_name t_name);
+  ]
+
 let case_class env type_name
     (loc, orig_name, unique_name, an, opt_e) =
   let kt_class_name = class_name env type_name in
@@ -608,6 +617,8 @@ let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
     get_class_decorators an
     |> List.map (fun s -> Line ("@" ^ s))
   in
+  let module_annotations = Kotlin_annot.get_kotlin_module an in
+  let t_annotations = Kotlin_annot.get_kotlin_t an name in
   let rec unwrap e =
     match e with
     | Sum (loc, cases, an) ->
@@ -619,8 +630,8 @@ let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
     | Tuple _
     | List _
     | Option _
-    | Nullable _
-    | Name _ -> alias_wrapper env ~class_decorators name e
+    | Nullable _ -> alias_wrapper env ~class_decorators name e
+    | Name _ -> type_alias env module_annotations t_annotations name
     | Shared _ -> not_implemented loc "cyclic references"
     | Wrap (loc, e, an) -> unwrap e
     | Tvar _ -> not_implemented loc "parametrized type"

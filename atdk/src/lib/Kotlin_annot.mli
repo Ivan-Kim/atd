@@ -43,3 +43,7 @@ val get_kotlin_sumtype_repr : Atd.Annot.t -> sumtype_repr
 (** Returns text the user wants to be inserted at the beginning of the
     Kotlin file such as imports. *)
 val get_kotlin_json_text : Atd.Annot.t -> string list
+
+val get_kotlin_module : Atd.Annot.t -> string option
+
+val get_kotlin_t : Atd.Annot.t -> string -> string
