@@ -192,13 +192,14 @@ This implements classes for the types defined in '%s', providing
 methods and functions to convert data from/to JSON.
 */
 
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 // ############################################################################
 // # Private functions
 // ############################################################################
-
 
 // ############################################################################
 // # Public classes
