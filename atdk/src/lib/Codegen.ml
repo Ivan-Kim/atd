@@ -683,7 +683,7 @@ let run_file src_path =
        Filename.chop_suffix src_name ".atd"
      else
        src_name) ^ ".kt"
-    |> String.lowercase_ascii
+    |> to_camel_case true
   in
   let dst_path = dst_name in
   let full_module, _original_types =
