@@ -82,21 +82,26 @@ let create_struct_name env name =
 
 let init_env () : env =
   let keywords = [
-    (* Keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#keywords
+    (* Swift Keywords
+       https://docs.swift.org/swift-book/documentation/the-swift-programming-language/lexicalstructure/#Keywords-and-Punctuation
     *)
-    "False"; "await"; "else"; "import"; "pass";
-    "None"; "break"; "except"; "in"; "raise";
-    "True"; "class"; "finally"; "is"; "return";
-    "and"; "continue"; "for"; "lambda"; "try";
-    "as"; "def"; "from"; "nonlocal"; "while";
-    "assert"; "del"; "global"; "not"; "with";
-    "async"; "elif"; "if"; "or"; "yield";
-
-    (* Soft keywords
-       https://docs.python.org/3/reference/lexical_analysis.html#soft-keywords
-    *)
-    "match"; "case"; "_";
+    "associatedtype"; "borrowing"; "class"; "consuming"; "deinit"; "enum";
+    "extension"; "fileprivate"; "func"; "import"; "init"; "inout"; "internal";
+    "let"; "nonisolated"; "open"; "operator"; "precedencegroup"; "private";
+    "protocol"; "public"; "rethrows"; "static"; "struct"; "subscript";
+    "typealias"; "var"; "break"; "case"; "catch"; "continue"; "default";
+    "defer"; "do"; "else"; "fallthrough"; "for"; "guard"; "if"; "in"; "repeat";
+    "return"; "switch"; "throw"; "where"; "while"; "Any"; "as"; "await";
+    "catch"; "false"; "is"; "nil"; "rethrows"; "self"; "Self"; "super";
+    "throw"; "throws"; "true"; "try"; "_"; "#available"; "#colorLiteral";
+    "#else"; "#elseif"; "#endif"; "#fileLiteral"; "#if"; "#imageLiteral";
+    "#keyPath"; "#selector"; "#sourceLocation"; "#unavailable";
+    (* Soft keywords *)
+    "associativity"; "async"; "convenience"; "didSet"; "dynamic"; "final";
+    "get"; "indirect"; "infix"; "lazy"; "left"; "mutating"; "none";
+    "nonmutating"; "optional"; "override"; "package"; "postfix"; "precedence";
+    "prefix"; "Protocol"; "required"; "right"; "set"; "some"; "Type";
+    "unowned"; "weak"; "willSet";
   ]
   in
   (* Various variables used in the generated code.
@@ -104,21 +109,7 @@ let init_env () : env =
      variables either start with '_', 'atd_', or an uppercase letter.
   *)
   let reserved_variables = [
-    (* from typing *)
-    "Any"; "Callable"; "Dict"; "List"; "Optional"; "Tuple";
-
-    (* for use in json.dumps, json.loads etc. *)
-    "json";
-
-    (* exceptions *)
-    "ValueError";
-
-    (* used to check JSON node type *)
-    "isinstance";
-    "bool"; "int"; "float"; "str"; "dict"; "list"; "tuple";
-
-    (* other built-in variables *)
-    "self"; "cls"; "repr";
+    "Data"; "Bool"; "Int"; "Double"; "String";
   ] in
   let variables =
     Atd.Unique_name.init
@@ -129,8 +120,8 @@ let init_env () : env =
   let method_names () =
     Atd.Unique_name.init
       ~reserved_identifiers:(
-        ["from_json"; "to_json";
-         "from_json_string"; "to_json_string"]
+        ["fromJson"; "toJson";
+         "fromJsonString"; "toJsonString"]
         @ keywords
       )
       ~reserved_prefixes:["__"]
@@ -232,15 +223,15 @@ let assoc_kind loc (e : type_expr) an : assoc_kind =
   | _, Object, _ -> error_at loc "not a (string * _) list"
   | _, Array, _ -> error_at loc "not a (_ * _) list"
 
-(* Map ATD built-in types to built-in mypy types *)
-let py_type_name env (name : string) =
+(* Map ATD built-in types to built-in Swift types *)
+let swift_type_name env (name : string) =
   match name with
-  | "unit" -> "None"
-  | "bool" -> "bool"
-  | "int" -> "int"
-  | "float" -> "float"
-  | "string" -> "str"
-  | "abstract" -> "Any"
+  | "unit" -> "Void"
+  | "bool" -> "Bool"
+  | "int" -> "Int"
+  | "float" -> "Double"
+  | "string" -> "String"
+  | "abstract" -> "Data"
   | user_defined -> struct_name env user_defined
 
 let rec type_name_of_expr env (e : type_expr) : string =
@@ -252,25 +243,25 @@ let rec type_name_of_expr env (e : type_expr) : string =
         xs
         |> List.map (fun (loc, x, an) -> type_name_of_expr env x)
       in
-      sprintf "Tuple[%s]" (String.concat ", " type_names)
+      sprintf "(%s)" (String.concat ", " type_names)
   | List (loc, e, an) ->
      (match assoc_kind loc e an with
        | Array_list
        | Object_list _ ->
-           sprintf "List[%s]"
+           sprintf "[%s]"
              (type_name_of_expr env e)
        | Array_dict (key, value) ->
-           sprintf "Dict[%s, %s]"
+           sprintf "[%s: %s]"
              (type_name_of_expr env key) (type_name_of_expr env value)
        | Object_dict value ->
-           sprintf "Dict[str, %s]"
+           sprintf "[String: %s]"
              (type_name_of_expr env value)
       )
-  | Option (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
-  | Nullable (loc, e, an) -> sprintf "Optional[%s]" (type_name_of_expr env e)
+  | Option (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
+  | Nullable (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> todo "wrap"
-  | Name (loc, (loc2, name, []), an) -> py_type_name env name
+  | Name (loc, (loc2, name, []), an) -> swift_type_name env name
   | Name (loc, (_, name, _::_), _) -> assert false
   | Tvar (loc, _) -> not_implemented loc "type variables"
 
@@ -281,17 +272,17 @@ let rec get_default_default (e : type_expr) : string option =
   | Tuple _ (* a default tuple could be possible but we're lazy *) -> None
   | List _ -> Some "[]"
   | Option _
-  | Nullable _ -> Some "None"
+  | Nullable _ -> Some "nil"
   | Shared (loc, e, an) -> get_default_default e
   | Wrap (loc, e, an) -> get_default_default e
   | Name (loc, (loc2, name, []), an) ->
       (match name with
-       | "unit" -> Some "None"
-       | "bool" -> Some "False"
+       | "unit" -> None
+       | "bool" -> Some "false"
        | "int" -> Some "0"
        | "float" -> Some "0.0"
        | "string" -> Some {|""|}
-       | "abstract" -> Some "None"
+       | "abstract" -> None
        | _ -> None
       )
   | Name _ -> None

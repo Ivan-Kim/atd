@@ -17,9 +17,9 @@ import SwiftUI
 class RecursiveClass:
     """Original type: recursive_class = { ... }"""
 
-    id: int
-    flag: bool
-    children: List[RecursiveClass]
+    id: Int
+    flag: Bool
+    children: [RecursiveClass]
 
     @classmethod
     def from_json(cls, x: Any) -> 'RecursiveClass':
@@ -68,7 +68,7 @@ class Root_:
 class Thing:
     """Original type: kind = [ ... | Thing of ... | ... ]"""
 
-    value: int
+    value: Int
 
     @property
     def kind(self) -> str:
@@ -103,7 +103,7 @@ class WOW:
 class Amaze:
     """Original type: kind = [ ... | Amaze of ... | ... ]"""
 
-    value: List[str]
+    value: [String]
 
     @property
     def kind(self) -> str:
@@ -160,7 +160,7 @@ class Kind:
 class Alias:
     """Original type: alias"""
 
-    value: List[int]
+    value: [Int]
 
     @classmethod
     def from_json(cls, x: Any) -> 'Alias':
@@ -181,7 +181,7 @@ class Alias:
 class KindParametrizedTuple:
     """Original type: _kind_parametrized_tuple"""
 
-    value: Tuple[Kind, Kind, int]
+    value: (Kind, Kind, Int)
 
     @classmethod
     def from_json(cls, x: Any) -> 'KindParametrizedTuple':
@@ -202,8 +202,8 @@ class KindParametrizedTuple:
 class IntFloatParametrizedRecord:
     """Original type: _int_float_parametrized_record = { ... }"""
 
-    field_a: int
-    field_b: List[float] = field(default_factory=lambda: [])
+    field_a: Int
+    field_b: [Double] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'IntFloatParametrizedRecord':
@@ -233,25 +233,25 @@ class IntFloatParametrizedRecord:
 class Root:
     """Original type: root = { ... }"""
 
-    id: str
-    await_: bool
-    x___init__: float
-    items: List[List[int]]
+    id: String
+    await_: Bool
+    x___init__: Double
+    items: [[Int]]
     aliased: Alias
-    point: Tuple[float, float]
-    kinds: List[Kind]
-    assoc1: List[Tuple[float, int]]
-    assoc2: List[Tuple[str, int]]
-    assoc3: Dict[float, int]
-    assoc4: Dict[str, int]
-    nullables: List[Optional[int]]
-    options: List[Optional[int]]
-    untyped_things: List[Any]
+    point: (Double, Double)
+    kinds: [Kind]
+    assoc1: [(Double, Int)]
+    assoc2: [(String, Int)]
+    assoc3: [Double: Int]
+    assoc4: [String: Int]
+    nullables: [Int?]
+    options: [Int?]
+    untyped_things: [Data]
     parametrized_record: IntFloatParametrizedRecord
     parametrized_tuple: KindParametrizedTuple
-    maybe: Optional[int] = None
-    extras: List[int] = field(default_factory=lambda: [])
-    answer: int = field(default_factory=lambda: 42)
+    maybe: Int? = None
+    extras: [Int] = field(default_factory=lambda: [])
+    answer: Int = field(default_factory=lambda: 42)
 
     @classmethod
     def from_json(cls, x: Any) -> 'Root':
@@ -316,7 +316,7 @@ class Root:
 class Pair:
     """Original type: pair"""
 
-    value: Tuple[str, int]
+    value: (String, Int)
 
     @classmethod
     def from_json(cls, x: Any) -> 'Pair':
@@ -337,7 +337,7 @@ class Pair:
 class DefaultList:
     """Original type: default_list = { ... }"""
 
-    items: List[int] = field(default_factory=lambda: [])
+    items: [Int] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DefaultList':
