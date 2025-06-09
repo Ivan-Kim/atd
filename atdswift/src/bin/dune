@@ -1,10 +1,10 @@
 (executable
- (name Atdpy_main)
- (public_name atdpy)
- (package atdpy)
+ (name Atdswift_main)
+ (public_name atdswift)
+ (package atdswift)
  (libraries
    cmdliner
-   atdpy
+   atdswift
    atd
  )
 )

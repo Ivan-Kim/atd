@@ -1,23 +1,6 @@
 (*
-   Python code generation for JSON support (no biniou support)
-
-   Takes the contents of a .atd file and translates it to a .py file.
-
-   Design:
-   - Python's standard 'json' module handles the parsing into generic
-     dictionaries and such.
-   - The generated code assigns one class to each ATD record. The use
-     of type annotations allows for some type checking with mypy.
-   - When converting from JSON to Python, the well-formedness of the data
-     is checked.
-   - When converting from Python to JSON, the well-formedness of the data
-     is checked as well since the type system is too easy to bypass.
-   - Sum types use one main class and one subclass per case.
-   - Tuples, like arrays, options, and nullables don't get a class of
-     their own.
-   - Generic functions are provided to deal with the case where the JSON
-     root is an array.
-
+   Swift code generation for JSON support (no biniou support)
+   Takes the contents of a .atd file and translates it to a .swift file.
    Look into the tests to see what generated code looks like.
 *)
 
@@ -37,9 +20,9 @@ type env = {
   translate_inst_variable: unit -> (string -> string);
 }
 
-let annot_schema_python : Atd.Annot.schema_section =
+let annot_schema_swift : Atd.Annot.schema_section =
   {
-    section = "python";
+    section = "swift";
     fields = [
       Module_head, "text";
       Module_head, "json_py.text";
@@ -50,9 +33,9 @@ let annot_schema_python : Atd.Annot.schema_section =
   }
 
 let annot_schema : Atd.Annot.schema =
-  annot_schema_python :: Atd.Json.annot_schema_json
+  annot_schema_swift :: Atd.Json.annot_schema_json
 
-(* Translate a preferred variable name into an available Python identifier. *)
+(* Translate a preferred variable name into an available Swift identifier. *)
 let trans env id =
   env.translate_variable id
 
@@ -83,17 +66,17 @@ let to_camel_case s =
     | 'A'..'Z' | 'a'..'z' | '_' -> name
     | _ -> "X" ^ name
 
-(* Use CamelCase as recommended by PEP 8. *)
-let class_name env id =
+(* Use CamelCase as recommended. *)
+let struct_name env id =
   trans env (to_camel_case id)
 
 (*
-   Create a class identifier that hasn't been seen yet.
+   Create a struct identifier that hasn't been seen yet.
    This is for internal disambiguation and still must translated using
-   the 'trans' function ('class_name' will not work due to trailing
+   the 'trans' function ('struct_name' will not work due to trailing
    underscores being added for disambiguation).
 *)
-let create_class_name env name =
+let create_struct_name env name =
   let preferred_id = to_camel_case name in
   env.create_variable preferred_id
 
@@ -171,9 +154,7 @@ let init_env () : env =
 
 type quote_kind = Single | Double
 
-(* Escape a string fragment to be placed in single quotes or double quotes.
-   https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
-*)
+(* Escape a string fragment to be placed in single quotes or double quotes. *)
 let escape_string_content quote_kind s =
   let buf = Buffer.create (String.length s + 2) in
   for i = 0 to String.length s - 1 do
@@ -457,7 +438,7 @@ def _atd_write_option(write_elt: Callable[[Any], Any]) \
     atd_filename
 
 let not_implemented loc msg =
-  A.error_at loc ("not implemented in atdpy: " ^ msg)
+  A.error_at loc ("not implemented in atdswift: " ^ msg)
 
 let todo hint =
   failwith ("TODO: " ^ hint)
@@ -475,7 +456,7 @@ let double_spaced blocks =
   spaced ~spacer:[Line ""; Line ""] blocks
 
 (*
-   Representations of ATD type '(string * value) list' in JSON and Python.
+   Representations of ATD type '(string * value) list' in JSON and Swift.
    Key type or value type are provided when it's useful.
 *)
 type assoc_kind =
@@ -487,8 +468,8 @@ type assoc_kind =
 
 let assoc_kind loc (e : type_expr) an : assoc_kind =
   let json_repr = Atd.Json.get_json_list an in
-  let python_repr = Python_annot.get_python_assoc_repr an in
-  match e, json_repr, python_repr with
+  let swift_repr = Swift_annot.get_swift_assoc_repr an in
+  match e, json_repr, swift_repr with
   | Tuple (loc, [(_, key, _); (_, value, _)], an2), Array, Dict ->
       Array_dict (key, value)
   | Tuple (loc,
@@ -511,7 +492,7 @@ let py_type_name env (name : string) =
   | "float" -> "float"
   | "string" -> "str"
   | "abstract" -> "Any"
-  | user_defined -> class_name env user_defined
+  | user_defined -> struct_name env user_defined
 
 let rec type_name_of_expr env (e : type_expr) : string =
   match e with
@@ -567,8 +548,8 @@ let rec get_default_default (e : type_expr) : string option =
   | Name _ -> None
   | Tvar _ -> None
 
-let get_python_default (e : type_expr) (an : annot) : string option =
-  let user_default = Python_annot.get_python_default an in
+let get_swift_default (e : type_expr) (an : annot) : string option =
+  let user_default = Swift_annot.get_swift_default an in
   match user_default with
   | Some s -> Some s
   | None -> get_default_default e
@@ -580,14 +561,14 @@ let has_no_class_inst_prop_default
   | Required -> true
   | Optional -> (* default is None *) false
   | With_default ->
-      match get_python_default e an with
+      match get_swift_default e an with
       | Some _ -> false
       | None ->
           (* There's either no default at all which is an error,
              or the default value is known to be mutable. *)
           true
 
-(* If the field is '?foo: bar option', its python or json value has type
+(* If the field is '?foo: bar option', its Swift or json value has type
    'bar' rather than 'bar option'. *)
 let unwrap_field_type loc field_name kind e =
   match kind with
@@ -643,7 +624,7 @@ let rec json_writer env e =
   | Tvar (loc, _) -> not_implemented loc "type variables"
 
 (*
-   Convert python tuple to json list
+   Convert Swift tuple to json list
 
    (lambda x: [write0(x[0]), write1(x[1])] if isinstance(x, tuple) else error())
 *)
@@ -720,7 +701,7 @@ let rec json_reader env (e : type_expr) =
       (match name with
        | "bool" | "int" | "float" | "string" -> sprintf "_atd_read_%s" name
        | "abstract" -> "(lambda x: x)"
-       | _ -> sprintf "%s.from_json" (class_name env name))
+       | _ -> sprintf "%s.from_json" (struct_name env name))
   | Name (loc, _, _) -> not_implemented loc "parametrized types"
   | Tvar (loc, _) -> not_implemented loc "type variables"
 
@@ -745,7 +726,7 @@ and tuple_reader env cells =
 
 let from_json_class_argument
     env trans_meth py_class_name ((loc, (name, kind, an), e) : simple_field) =
-  let python_name = inst_var_name trans_meth name in
+  let swift_name = inst_var_name trans_meth name in
   let json_name = Atd.Json.get_json_fname name an in
   let unwrapped_type =
     match kind with
@@ -767,7 +748,7 @@ let from_json_class_argument
           (single_esc json_name)
     | Optional -> "None"
     | With_default ->
-        match get_python_default e an with
+        match get_swift_default e an with
         | Some x -> x
         | None ->
             A.error_at loc
@@ -775,7 +756,7 @@ let from_json_class_argument
                  name)
   in
   sprintf "%s=%s(x['%s']) if '%s' in x else %s,"
-    python_name
+    swift_name
     (json_reader env unwrapped_type)
     (single_esc json_name)
     (single_esc json_name)
@@ -791,7 +772,7 @@ let inst_var_declaration
     | Required -> ""
     | Optional -> " = None"
     | With_default ->
-        match get_python_default unwrapped_e an with
+        match get_swift_default unwrapped_e an with
         | None -> ""
         | Some x ->
             (* This construct ensures that a fresh default value is
@@ -804,7 +785,7 @@ let inst_var_declaration
   ]
 
 let record env ~class_decorators loc name (fields : field list) an =
-  let py_class_name = class_name env name in
+  let py_class_name = struct_name env name in
   let trans_meth = env.translate_inst_variable () in
   let fields =
     List.map (function
@@ -912,7 +893,7 @@ class Foo:
     ...
 *)
 let alias_wrapper env ~class_decorators name type_expr =
-  let py_class_name = class_name env name in
+  let py_class_name = struct_name env name in
   let value_type = type_name_of_expr env type_expr in
   [
     Inline class_decorators;
@@ -1028,7 +1009,7 @@ let read_cases0 env loc name cases0 =
   [
     Inline ifs;
     Line (sprintf "_atd_bad_json('%s', x)"
-            (class_name env name |> single_esc))
+            (struct_name env name |> single_esc))
   ]
 
 let read_cases1 env loc name cases1 =
@@ -1054,11 +1035,11 @@ let read_cases1 env loc name cases1 =
   [
     Inline ifs;
     Line (sprintf "_atd_bad_json('%s', x)"
-            (class_name env name |> single_esc))
+            (struct_name env name |> single_esc))
   ]
 
 let sum_container env ~class_decorators loc name cases =
-  let py_class_name = class_name env name in
+  let py_class_name = struct_name env name in
   let type_list =
     List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
       trans env unique_name
@@ -1113,7 +1094,7 @@ let sum_container env ~class_decorators loc name cases =
         Inline cases0_block;
         Inline cases1_block;
         Line (sprintf "_atd_bad_json('%s', x)"
-                (single_esc (class_name env name)))
+                (single_esc (struct_name env name)))
       ];
       Line "";
       Line "def to_json(self) -> Any:";
@@ -1140,7 +1121,7 @@ let sum env ~class_decorators loc name cases =
     List.map (fun (x : variant) ->
       match x with
       | Variant (loc, (orig_name, an), opt_e) ->
-          let unique_name = create_class_name env orig_name in
+          let unique_name = create_struct_name env orig_name in
           (loc, orig_name, unique_name, an, opt_e)
       | Inherit _ -> assert false
     ) cases
@@ -1161,7 +1142,7 @@ let uses_dataclass_decorator =
   fun s -> Re.Pcre.pmatch ~rex s
 
 let get_class_decorators an =
-  let decorators = Python_annot.get_python_decorators an in
+  let decorators = Swift_annot.get_swift_decorators an in
   (* Avoid duplicate use of the @dataclass decorator, which doesn't work
      if some options like frozen=True are used. *)
   if List.exists uses_dataclass_decorator decorators then
@@ -1215,18 +1196,18 @@ let definition_group ~atd_filename env
 *)
 let reserve_good_class_names env (items: A.module_body) =
   List.iter
-    (fun (Type (loc, (name, param, an), e)) -> ignore (class_name env name))
+    (fun (Type (loc, (name, param, an), e)) -> ignore (struct_name env name))
     items
 
 let to_file ~atd_filename ~head (items : A.module_body) dst_path =
   let env = init_env () in
   reserve_good_class_names env items;
   let head = List.map (fun s -> Line s) head in
-  let python_defs =
+  let swift_defs =
     Atd.Util.tsort items
     |> List.map (fun x -> Inline (definition_group ~atd_filename env x))
   in
-  Line (fixed_size_preamble atd_filename) :: Inline head :: python_defs
+  Line (fixed_size_preamble atd_filename) :: Inline head :: swift_defs
   |> double_spaced
   |> Indent.to_file ~indent:4 dst_path
 
@@ -1236,7 +1217,7 @@ let run_file src_path =
     (if Filename.check_suffix src_name ".atd" then
        Filename.chop_suffix src_name ".atd"
      else
-       src_name) ^ ".py"
+       src_name) ^ ".swift"
     |> String.lowercase_ascii
   in
   let dst_path = dst_name in
@@ -1251,5 +1232,5 @@ let run_file src_path =
   in
   let full_module = Atd.Ast.use_only_specific_variants full_module in
   let (atd_head, atd_module) = full_module in
-  let head = Python_annot.get_python_json_text (snd atd_head) in
+  let head = Swift_annot.get_swift_json_text (snd atd_head) in
   to_file ~atd_filename:src_name ~head atd_module dst_path

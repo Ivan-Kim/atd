@@ -1,5 +1,5 @@
 (library
- (name atdpy)
+ (name atdswift)
  (libraries
    re
    atd

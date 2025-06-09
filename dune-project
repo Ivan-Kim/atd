@@ -221,3 +221,14 @@ Melange backend")
   (cmdliner (>= 1.1.0))
   re
   (odoc :with-doc)))
+
+(package
+ (name atdswift)
+ (synopsis "Swift code generation for ATD APIs")
+ (description "Swift code generation for ATD APIs")
+ (depends
+  (ocaml (>= 4.08))
+  (atd (>= 2.11.0))
+  (cmdliner (>= 1.1.0))
+  re
+  (odoc :with-doc)))

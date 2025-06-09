@@ -1,16 +1,16 @@
 #
-# Python-mypy/JSON backend
+# Swift/JSON backend
 #
 
 DUNE ?= dune
 
 .PHONY: build
 build:
-	rm -f bin/atdpy
+	rm -f bin/atdswift
 	$(MAKE) clean-for-dune
 	$(DUNE) build @all
 	mkdir -p bin
-	ln -s ../../_build/install/default/bin/atdpy bin/atdpy
+	ln -s ../../_build/install/default/bin/atdswift bin/atdswift
 
 # The symlink facilitates the development of test code that depends on the
 # generated code.
@@ -18,13 +18,13 @@ build:
 test:
 	$(MAKE) clean-for-dune
 	$(DUNE) runtest -f; status=$$?; \
-	  ln -s ../../../_build/default/atdpy/test/python-tests/everything.py \
-	    test/python-tests/everything.py && \
+	  ln -s ../../../_build/default/atdswift/test/swift-tests/everything.py \
+	    test/swift-tests/everything.py && \
 	  exit "$$status"
 
 .PHONY: clean-for-dune
 clean-for-dune:
-	rm -f test/python-tests/everything.py
+	rm -f test/swift-tests/everything.py
 
 .PHONY: clean
 clean:
