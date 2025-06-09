@@ -18,13 +18,13 @@ build:
 test:
 	$(MAKE) clean-for-dune
 	$(DUNE) runtest -f; status=$$?; \
-	  ln -s ../../../_build/default/atdswift/test/swift-tests/everything.py \
-	    test/swift-tests/everything.py && \
+	  ln -s ../../../_build/default/atdswift/test/swift-tests/everything.swift \
+	    test/swift-tests/everything.swift && \
 	  exit "$$status"
 
 .PHONY: clean-for-dune
 clean-for-dune:
-	rm -f test/swift-tests/everything.py
+	rm -f test/swift-tests/everything.swift
 
 .PHONY: clean
 clean:

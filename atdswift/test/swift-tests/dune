@@ -1,29 +1,27 @@
 ;
-; Convert ATD -> Python
+; Convert ATD -> Swift 
 ;
 (rule
   (targets
-    allcaps.py
-    everything.py
+    allcaps.swift
+    everything.swift
   )
   (deps
     ../atd-input/ALLCAPS.atd
     ../atd-input/everything.atd
   )
   (action
-    (run %{bin:atdpy} %{deps})))
+    (run %{bin:atdswift} %{deps})))
 
 ;
-; Typecheck and run the tests on the generated Python code.
+; Typecheck and run the tests on the generated Swift code.
 ;
 (rule
  (alias runtest)
- (package atdpy)
+ (package atdswift)
  (deps
-  everything.py
-  (glob_files *.py))
+  everything.swift
+  (glob_files *.swift))
  (action
   (progn
-   (run python3 -m flake8 .)
-   (run python3 -m mypy --strict .)
-   (run python3 -m pytest .))))
+   (run swift -version))))

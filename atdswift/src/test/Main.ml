@@ -9,6 +9,6 @@ let test_suites : unit Alcotest.test list = [
 ]
 
 let main () =
-  Alcotest.run "atdpy" test_suites
+  Alcotest.run "atdswift" test_suites
 
 let () = main ()

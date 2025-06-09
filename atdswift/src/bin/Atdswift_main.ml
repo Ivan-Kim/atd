@@ -110,7 +110,7 @@ let parse_command_line_and_run run =
     Cmd.info
       ~doc
       ~man
-      "atdpy"
+      "atdswift"
   in
   Cmd.v info (cmdline_term run) |> Cmd.eval |> exit
 

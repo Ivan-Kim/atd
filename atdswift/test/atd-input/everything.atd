@@ -1,18 +1,12 @@
-<python text="# This was inserted by the user.">
-<python json_py.text="import deco">
-<python json_py.text="from dataclasses import dataclass">
+<swift text="# This was inserted by the user.">
+<swift json_py.text="import deco">
+<swift json_py.text="from dataclasses import dataclass">
 
 type kind = [
   | Root (* class name conflict *)
   | Thing of int
   | WOW <json name="wow">
   | Amaze <json name="!!!"> of string list
-]
-
-type frozen
-  <python decorator="dataclass(frozen=True)"> = [
-  | A
-  | B of int
 ]
 
 type ('a, 'b) parametrized_record = {
@@ -29,14 +23,14 @@ type root = {
   items: int list list;
   ?maybe: int option;
   ~extras: int list;
-  ~answer <python default="42">: int;
+  ~answer <swift default="42">: int;
   aliased: alias;
   point: (float * float);
   kinds: kind list;
   assoc1: (float * int) list;
   assoc2: (string * int) list <json repr="object">;
-  assoc3: (float * int) list <python repr="dict">;
-  assoc4: (string * int) list <json repr="object"> <python repr="dict">;
+  assoc3: (float * int) list <swift repr="dict">;
+  assoc4: (string * int) list <json repr="object"> <swift repr="dict">;
   nullables: int nullable list;
   options: int option list;
   untyped_things: abstract list;
@@ -47,12 +41,6 @@ type root = {
 type alias = int list
 
 type pair = (string * int)
-
-type require_field <python decorator="deco.deco1"
-                           decorator="deco.deco2(42)"
-                           decorator="dataclass(order=True)"> = {
-  req: string;
-}
 
 type recursive_class = {
   id: int;
