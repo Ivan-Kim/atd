@@ -67,5 +67,5 @@ let get_swift_json_text an : string list =
   @ Atd.Annot.get_fields
     ~parse:(fun s -> Some s)
     ~sections:["swift"]
-    ~field:"json_py.text"
+    ~field:"json_swift.text"
     an
