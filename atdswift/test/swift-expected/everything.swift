@@ -13,41 +13,33 @@ import Foundation
 import SwiftUI
 
 
-@dataclass
-class RecursiveClass:
-    """Original type: recursive_class = { ... }"""
+struct RecursiveClass: Codable {
+    // Original type: recursive_class = { ... }
 
-    id: Int
-    flag: Bool
-    children: [RecursiveClass]
+    var id: Int
+    var flag: Bool
+    var children: [RecursiveClass]
 
-    @classmethod
-    def from_json(cls, x: Any) -> 'RecursiveClass':
-        if isinstance(x, dict):
-            return cls(
-                id=_atd_read_int(x['id']) if 'id' in x else _atd_missing_json_field('RecursiveClass', 'id'),
-                flag=_atd_read_bool(x['flag']) if 'flag' in x else _atd_missing_json_field('RecursiveClass', 'flag'),
-                children=_atd_read_list(RecursiveClass.from_json)(x['children']) if 'children' in x else _atd_missing_json_field('RecursiveClass', 'children'),
-            )
-        else:
-            _atd_bad_json('RecursiveClass', x)
+    static func fromJson(json: Data) throws -> RecursiveClass {
+        return try JSONDecoder().decode(RecursiveClass.self, from: json)
+    }
 
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['id'] = _atd_write_int(self.id)
-        res['flag'] = _atd_write_bool(self.flag)
-        res['children'] = _atd_write_list((lambda x: x.to_json()))(self.children)
-        return res
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-    @classmethod
-    def from_json_string(cls, x: str) -> 'RecursiveClass':
-        return cls.from_json(json.loads(x))
+    static func fromJsonString(jsonString: String) throws -> RecursiveClass {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(RecursiveClass.self, from: jsonData)
+    }
 
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+}
 
 
-@dataclass
 class Root_:
     """Original type: kind = [ ... | Root | ... ]"""
 
@@ -64,7 +56,6 @@ class Root_:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class Thing:
     """Original type: kind = [ ... | Thing of ... | ... ]"""
 
@@ -82,7 +73,6 @@ class Thing:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class WOW:
     """Original type: kind = [ ... | WOW | ... ]"""
 
@@ -99,7 +89,6 @@ class WOW:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class Amaze:
     """Original type: kind = [ ... | Amaze of ... | ... ]"""
 
@@ -117,7 +106,6 @@ class Amaze:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class Kind:
     """Original type: kind = [ ... ]"""
 
@@ -156,7 +144,6 @@ class Kind:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class Alias:
     """Original type: alias"""
 
@@ -177,7 +164,6 @@ class Alias:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
 class KindParametrizedTuple:
     """Original type: _kind_parametrized_tuple"""
 
@@ -198,121 +184,75 @@ class KindParametrizedTuple:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
-class IntFloatParametrizedRecord:
-    """Original type: _int_float_parametrized_record = { ... }"""
+struct IntFloatParametrizedRecord: Codable {
+    // Original type: _int_float_parametrized_record = { ... }
 
-    field_a: Int
-    field_b: [Double] = field(default_factory=lambda: [])
+    var field_a: Int
+    var field_b: [Double] = []
 
-    @classmethod
-    def from_json(cls, x: Any) -> 'IntFloatParametrizedRecord':
-        if isinstance(x, dict):
-            return cls(
-                field_a=_atd_read_int(x['field_a']) if 'field_a' in x else _atd_missing_json_field('IntFloatParametrizedRecord', 'field_a'),
-                field_b=_atd_read_list(_atd_read_float)(x['field_b']) if 'field_b' in x else [],
-            )
-        else:
-            _atd_bad_json('IntFloatParametrizedRecord', x)
+    static func fromJson(json: Data) throws -> IntFloatParametrizedRecord {
+        return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: json)
+    }
 
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['field_a'] = _atd_write_int(self.field_a)
-        res['field_b'] = _atd_write_list(_atd_write_float)(self.field_b)
-        return res
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-    @classmethod
-    def from_json_string(cls, x: str) -> 'IntFloatParametrizedRecord':
-        return cls.from_json(json.loads(x))
+    static func fromJsonString(jsonString: String) throws -> IntFloatParametrizedRecord {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: jsonData)
+    }
 
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+}
 
 
-@dataclass
-class Root:
-    """Original type: root = { ... }"""
+struct Root: Codable {
+    // Original type: root = { ... }
 
-    id: String
-    await_: Bool
-    x___init__: Double
-    items: [[Int]]
-    aliased: Alias
-    point: (Double, Double)
-    kinds: [Kind]
-    assoc1: [(Double, Int)]
-    assoc2: [(String, Int)]
-    assoc3: [Double: Int]
-    assoc4: [String: Int]
-    nullables: [Int?]
-    options: [Int?]
-    untyped_things: [Data]
-    parametrized_record: IntFloatParametrizedRecord
-    parametrized_tuple: KindParametrizedTuple
-    maybe: Int? = None
-    extras: [Int] = field(default_factory=lambda: [])
-    answer: Int = field(default_factory=lambda: 42)
+    var id: String
+    var await_: Bool
+    var x___init__: Double
+    var items: [[Int]]
+    var aliased: Alias
+    var point: (Double, Double)
+    var kinds: [Kind]
+    var assoc1: [(Double, Int)]
+    var assoc2: [(String, Int)]
+    var assoc3: [Double: Int]
+    var assoc4: [String: Int]
+    var nullables: [Int?]
+    var options: [Int?]
+    var untyped_things: [Data]
+    var parametrized_record: IntFloatParametrizedRecord
+    var parametrized_tuple: KindParametrizedTuple
+    var maybe: Int?
+    var extras: [Int] = []
+    var answer: Int = 42
 
-    @classmethod
-    def from_json(cls, x: Any) -> 'Root':
-        if isinstance(x, dict):
-            return cls(
-                id=_atd_read_string(x['ID']) if 'ID' in x else _atd_missing_json_field('Root', 'ID'),
-                await_=_atd_read_bool(x['await']) if 'await' in x else _atd_missing_json_field('Root', 'await'),
-                x___init__=_atd_read_float(x['__init__']) if '__init__' in x else _atd_missing_json_field('Root', '__init__'),
-                items=_atd_read_list(_atd_read_list(_atd_read_int))(x['items']) if 'items' in x else _atd_missing_json_field('Root', 'items'),
-                aliased=Alias.from_json(x['aliased']) if 'aliased' in x else _atd_missing_json_field('Root', 'aliased'),
-                point=(lambda x: (_atd_read_float(x[0]), _atd_read_float(x[1])) if isinstance(x, list) and len(x) == 2 else _atd_bad_json('array of length 2', x))(x['point']) if 'point' in x else _atd_missing_json_field('Root', 'point'),
-                kinds=_atd_read_list(Kind.from_json)(x['kinds']) if 'kinds' in x else _atd_missing_json_field('Root', 'kinds'),
-                assoc1=_atd_read_list((lambda x: (_atd_read_float(x[0]), _atd_read_int(x[1])) if isinstance(x, list) and len(x) == 2 else _atd_bad_json('array of length 2', x)))(x['assoc1']) if 'assoc1' in x else _atd_missing_json_field('Root', 'assoc1'),
-                assoc2=_atd_read_assoc_object_into_list(_atd_read_int)(x['assoc2']) if 'assoc2' in x else _atd_missing_json_field('Root', 'assoc2'),
-                assoc3=_atd_read_assoc_array_into_dict(_atd_read_float, _atd_read_int)(x['assoc3']) if 'assoc3' in x else _atd_missing_json_field('Root', 'assoc3'),
-                assoc4=_atd_read_assoc_object_into_dict(_atd_read_int)(x['assoc4']) if 'assoc4' in x else _atd_missing_json_field('Root', 'assoc4'),
-                nullables=_atd_read_list(_atd_read_nullable(_atd_read_int))(x['nullables']) if 'nullables' in x else _atd_missing_json_field('Root', 'nullables'),
-                options=_atd_read_list(_atd_read_option(_atd_read_int))(x['options']) if 'options' in x else _atd_missing_json_field('Root', 'options'),
-                untyped_things=_atd_read_list((lambda x: x))(x['untyped_things']) if 'untyped_things' in x else _atd_missing_json_field('Root', 'untyped_things'),
-                parametrized_record=IntFloatParametrizedRecord.from_json(x['parametrized_record']) if 'parametrized_record' in x else _atd_missing_json_field('Root', 'parametrized_record'),
-                parametrized_tuple=KindParametrizedTuple.from_json(x['parametrized_tuple']) if 'parametrized_tuple' in x else _atd_missing_json_field('Root', 'parametrized_tuple'),
-                maybe=_atd_read_int(x['maybe']) if 'maybe' in x else None,
-                extras=_atd_read_list(_atd_read_int)(x['extras']) if 'extras' in x else [],
-                answer=_atd_read_int(x['answer']) if 'answer' in x else 42,
-            )
-        else:
-            _atd_bad_json('Root', x)
+    static func fromJson(json: Data) throws -> Root {
+        return try JSONDecoder().decode(Root.self, from: json)
+    }
 
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['ID'] = _atd_write_string(self.id)
-        res['await'] = _atd_write_bool(self.await_)
-        res['__init__'] = _atd_write_float(self.x___init__)
-        res['items'] = _atd_write_list(_atd_write_list(_atd_write_int))(self.items)
-        res['aliased'] = (lambda x: x.to_json())(self.aliased)
-        res['point'] = (lambda x: [_atd_write_float(x[0]), _atd_write_float(x[1])] if isinstance(x, tuple) and len(x) == 2 else _atd_bad_python('tuple of length 2', x))(self.point)
-        res['kinds'] = _atd_write_list((lambda x: x.to_json()))(self.kinds)
-        res['assoc1'] = _atd_write_list((lambda x: [_atd_write_float(x[0]), _atd_write_int(x[1])] if isinstance(x, tuple) and len(x) == 2 else _atd_bad_python('tuple of length 2', x)))(self.assoc1)
-        res['assoc2'] = _atd_write_assoc_list_to_object(_atd_write_int)(self.assoc2)
-        res['assoc3'] = _atd_write_assoc_dict_to_array(_atd_write_float, _atd_write_int)(self.assoc3)
-        res['assoc4'] = _atd_write_assoc_dict_to_object(_atd_write_int)(self.assoc4)
-        res['nullables'] = _atd_write_list(_atd_write_nullable(_atd_write_int))(self.nullables)
-        res['options'] = _atd_write_list(_atd_write_option(_atd_write_int))(self.options)
-        res['untyped_things'] = _atd_write_list((lambda x: x))(self.untyped_things)
-        res['parametrized_record'] = (lambda x: x.to_json())(self.parametrized_record)
-        res['parametrized_tuple'] = (lambda x: x.to_json())(self.parametrized_tuple)
-        if self.maybe is not None:
-            res['maybe'] = _atd_write_int(self.maybe)
-        res['extras'] = _atd_write_list(_atd_write_int)(self.extras)
-        res['answer'] = _atd_write_int(self.answer)
-        return res
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Root':
-        return cls.from_json(json.loads(x))
+    static func fromJsonString(jsonString: String) throws -> Root {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(Root.self, from: jsonData)
+    }
 
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+}
 
 
-@dataclass
 class Pair:
     """Original type: pair"""
 
@@ -333,29 +273,26 @@ class Pair:
         return json.dumps(self.to_json(), **kw)
 
 
-@dataclass
-class DefaultList:
-    """Original type: default_list = { ... }"""
+struct DefaultList: Codable {
+    // Original type: default_list = { ... }
 
-    items: [Int] = field(default_factory=lambda: [])
+    var items: [Int] = []
 
-    @classmethod
-    def from_json(cls, x: Any) -> 'DefaultList':
-        if isinstance(x, dict):
-            return cls(
-                items=_atd_read_list(_atd_read_int)(x['items']) if 'items' in x else [],
-            )
-        else:
-            _atd_bad_json('DefaultList', x)
+    static func fromJson(json: Data) throws -> DefaultList {
+        return try JSONDecoder().decode(DefaultList.self, from: json)
+    }
 
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['items'] = _atd_write_list(_atd_write_int)(self.items)
-        return res
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-    @classmethod
-    def from_json_string(cls, x: str) -> 'DefaultList':
-        return cls.from_json(json.loads(x))
+    static func fromJsonString(jsonString: String) throws -> DefaultList {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(DefaultList.self, from: jsonData)
+    }
 
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+}

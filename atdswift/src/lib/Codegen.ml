@@ -382,28 +382,6 @@ and tuple_writer env cells =
     tuple_body
     len len
 
-let construct_json_field env trans_meth
-    ((loc, (name, kind, an), e) : simple_field) =
-  let unwrapped_type = unwrap_field_type loc name kind e in
-  let writer_function = json_writer env unwrapped_type in
-  let assignment =
-    [
-      Line (sprintf "res['%s'] = %s(self.%s)"
-              (Atd.Json.get_json_fname name an |> single_esc)
-              writer_function
-              (inst_var_name trans_meth name))
-    ]
-  in
-  match kind with
-  | Required
-  | With_default -> assignment
-  | Optional ->
-      [
-        Line (sprintf "if self.%s is not None:"
-                (inst_var_name trans_meth name));
-        Block assignment
-      ]
-
 (*
    Function value that can be applied to a JSON node, converting it
    to the desired value.
@@ -464,44 +442,6 @@ and tuple_reader env cells =
     tuple_body
     len len
 
-let from_json_class_argument
-    env trans_meth py_class_name ((loc, (name, kind, an), e) : simple_field) =
-  let swift_name = inst_var_name trans_meth name in
-  let json_name = Atd.Json.get_json_fname name an in
-  let unwrapped_type =
-    match kind with
-    | Required
-    | With_default -> e
-    | Optional ->
-        match e with
-        | Option (loc, e, an) -> e
-        | _ ->
-            A.error_at loc
-              (sprintf "the type of optional field '%s' should be of \
-                        the form 'xxx option'" name)
-  in
-  let else_body =
-    match kind with
-    | Required ->
-        sprintf "_atd_missing_json_field('%s', '%s')"
-          (single_esc py_class_name)
-          (single_esc json_name)
-    | Optional -> "None"
-    | With_default ->
-        match get_swift_default e an with
-        | Some x -> x
-        | None ->
-            A.error_at loc
-              (sprintf "missing default Python value for field '%s'"
-                 name)
-  in
-  sprintf "%s=%s(x['%s']) if '%s' in x else %s,"
-    swift_name
-    (json_reader env unwrapped_type)
-    (single_esc json_name)
-    (single_esc json_name)
-    else_body
-
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
   let var_name = inst_var_name trans_meth name in
@@ -510,22 +450,18 @@ let inst_var_declaration
   let default =
     match kind with
     | Required -> ""
-    | Optional -> " = None"
+    | Optional -> ""
     | With_default ->
         match get_swift_default unwrapped_e an with
         | None -> ""
-        | Some x ->
-            (* This construct ensures that a fresh default value is
-               evaluated for each class instantiation. It's important for
-               default lists since Python lists are mutable. *)
-            sprintf " = field(default_factory=lambda: %s)" x
+        | Some x -> sprintf " = %s" x
   in
   [
-    Line (sprintf "%s: %s%s" var_name type_name default)
+    Line (sprintf "var %s: %s%s" var_name type_name default)
   ]
 
 let record env ~class_decorators loc name (fields : field list) an =
-  let py_class_name = struct_name env name in
+  let swift_class_name = struct_name env name in
   let trans_meth = env.translate_inst_variable () in
   let fields =
     List.map (function
@@ -533,13 +469,7 @@ let record env ~class_decorators loc name (fields : field list) an =
       | `Inherit _ -> (* expanded at loading time *) assert false)
       fields
   in
-  (*
-     Reorder fields with no-defaults first as required by @dataclass.
-     Starting with Python 3.10, '@dataclass(kw_only=True)' solves this
-     problem and makes this reordering unnecessary.
-     TODO: remove once we require python >= 3.10. It could also be done
-     as command-line flag specifying the Python version.
-  *)
+  (* Reorder fields with no-defaults first. *)
   let fields =
     let no_default, with_default =
       List.partition has_no_class_inst_prop_default fields in
@@ -548,72 +478,60 @@ let record env ~class_decorators loc name (fields : field list) an =
   let inst_var_declarations =
     List.map (fun x -> Inline (inst_var_declaration env trans_meth x)) fields
   in
-  let json_object_body =
-    List.map (fun x ->
-      Inline (construct_json_field env trans_meth x)) fields in
-  let from_json_class_arguments =
-    List.map (fun x ->
-      Line (from_json_class_argument env trans_meth py_class_name x)
-    ) fields in
   let from_json =
     [
-      Line "@classmethod";
-      Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
+      Line (sprintf "static func fromJson(json: Data) throws -> %s {"
+              swift_class_name);
       Block [
-        Line "if isinstance(x, dict):";
-        Block [
-          Line "return cls(";
-          Block from_json_class_arguments;
-          Line ")"
-        ];
-        Line "else:";
-        Block [
-          Line (sprintf "_atd_bad_json('%s', x)"
-                  (single_esc py_class_name))
-        ]
-      ]
+        Line (sprintf "return try JSONDecoder().decode(%s.self, from: json)"
+                swift_class_name);
+      ];
+      Line "}";
     ]
   in
   let to_json =
     [
-      Line "def to_json(self) -> Any:";
+      Line "func toJson() throws -> Data {";
       Block [
-        Line "res: Dict[str, Any] = {}";
-        Inline json_object_body;
-        Line "return res"
-      ]
+        Line "return try JSONEncoder().encode(self)"
+      ];
+      Line "}";
     ]
   in
   let from_json_string =
     [
-      Line "@classmethod";
-      Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
+      Line (sprintf "static func fromJsonString(jsonString: String) throws -> %s {"
+              swift_class_name);
       Block [
-        Line "return cls.from_json(json.loads(x))"
-      ]
+        Line "let jsonData = jsonString.data(using: .utf8)!";
+        Line (sprintf "return try JSONDecoder().decode(%s.self, from: jsonData)"
+                swift_class_name);
+      ];
+      Line "}";
     ]
   in
   let to_json_string =
     [
-      Line "def to_json_string(self, **kw: Any) -> str:";
+      Line "func toJsonString() throws -> String {";
       Block [
-        Line "return json.dumps(self.to_json(), **kw)"
-      ]
+        Line "let jsonData = try JSONEncoder().encode(self)";
+        Line "return String(data: jsonData, encoding: .utf8)!";
+      ];
+      Line "}";
     ]
   in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
+    Line (sprintf "struct %s: Codable {" swift_class_name);
     Block (spaced [
-      Line (sprintf {|"""Original type: %s = { ... }"""|} name);
+      Line (sprintf {|// Original type: %s = { ... }|} name);
       Inline inst_var_declarations;
       Inline from_json;
       Inline to_json;
       Inline from_json_string;
       Inline to_json_string;
-    ])
+    ]);
+    Line "}";
   ]
 
 (*
@@ -633,11 +551,11 @@ class Foo:
     ...
 *)
 let alias_wrapper env ~class_decorators name type_expr =
-  let py_class_name = struct_name env name in
+  let swift_class_name = struct_name env name in
   let value_type = type_name_of_expr env type_expr in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
+    Line (sprintf "class %s:" swift_class_name);
     Block [
       Line (sprintf {|"""Original type: %s"""|} name);
       Line "";
@@ -645,7 +563,7 @@ let alias_wrapper env ~class_decorators name type_expr =
       Line "";
       Line "@classmethod";
       Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc swift_class_name));
       Block [
         Line (sprintf "return cls(%s(x))" (json_reader env type_expr))
       ];
@@ -657,7 +575,7 @@ let alias_wrapper env ~class_decorators name type_expr =
       Line "";
       Line "@classmethod";
       Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc swift_class_name));
       Block [
         Line "return cls.from_json(json.loads(x))"
       ];
@@ -779,7 +697,7 @@ let read_cases1 env loc name cases1 =
   ]
 
 let sum_container env ~class_decorators loc name cases =
-  let py_class_name = struct_name env name in
+  let swift_class_name = struct_name env name in
   let type_list =
     List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
       trans env unique_name
@@ -814,7 +732,7 @@ let sum_container env ~class_decorators loc name cases =
   in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" py_class_name);
+    Line (sprintf "class %s:" swift_class_name);
     Block [
       Line (sprintf {|"""Original type: %s = [ ... ]"""|} name);
       Line "";
@@ -829,7 +747,7 @@ let sum_container env ~class_decorators loc name cases =
       Line "";
       Line "@classmethod";
       Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc swift_class_name));
       Block [
         Inline cases0_block;
         Inline cases1_block;
@@ -844,7 +762,7 @@ let sum_container env ~class_decorators loc name cases =
       Line "";
       Line "@classmethod";
       Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc py_class_name));
+              (single_esc swift_class_name));
       Block [
         Line "return cls.from_json(json.loads(x))"
       ];
@@ -877,24 +795,11 @@ let sum env ~class_decorators loc name cases =
   ]
   |> double_spaced
 
-let uses_dataclass_decorator =
-  let rex = Re.Pcre.regexp {|\A[ \t\r\n]*dataclass(\(|[ \t\r\n]|\z)|} in
-  fun s -> Re.Pcre.pmatch ~rex s
-
-let get_class_decorators an =
-  let decorators = Swift_annot.get_swift_decorators an in
-  (* Avoid duplicate use of the @dataclass decorator, which doesn't work
-     if some options like frozen=True are used. *)
-  if List.exists uses_dataclass_decorator decorators then
-    decorators
-  else
-    decorators @ ["dataclass"]
-
 let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
   if param <> [] then
     not_implemented loc "parametrized type";
   let class_decorators =
-    get_class_decorators an
+    Swift_annot.get_swift_decorators an
     |> List.map (fun s -> Line ("@" ^ s))
   in
   let rec unwrap e =
