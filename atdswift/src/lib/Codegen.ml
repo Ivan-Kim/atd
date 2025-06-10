@@ -151,6 +151,8 @@ methods and functions to convert data from/to JSON.
 */
 import Foundation
 
+// swiftlint:disable all
+
 // Public classes
 |}
     atd_filename

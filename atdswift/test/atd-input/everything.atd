@@ -1,6 +1,3 @@
-<swift text="// This was inserted by the user.">
-<swift json_swift.text="import SwiftUI">
-
 type kind = [
   | Root (* class name conflict *)
   | Thing of int

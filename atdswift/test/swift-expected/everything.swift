@@ -4,8 +4,8 @@ This implements structs for the types defined in 'everything.atd', providing
 methods and functions to convert data from/to JSON.
 */
 import Foundation
-// This was inserted by the user.
-import SwiftUI
+
+// swiftlint:disable all
 
 // Public classes
 
