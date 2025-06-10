@@ -40,108 +40,36 @@ struct RecursiveClass: Codable {
 }
 
 
-class Root_:
-    """Original type: kind = [ ... | Root | ... ]"""
+enum Kind: Codable {
+    // Original type: kind = [ ... ]
 
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Root_'
+    case Root_
+    // Original type: kind = [ ... | Root | ... ]
+    case Thing(Int)
+    // Original type: kind = [ ... | Thing of ... | ... ]
+    case WOW
+    // Original type: kind = [ ... | WOW | ... ]
+    case Amaze([String])
+    // Original type: kind = [ ... | Amaze of ... | ... ]
 
-    @staticmethod
-    def to_json() -> Any:
-        return 'Root'
+    static func fromJson(json: Data) throws -> Kind {
+        return try JSONDecoder().decode(Kind.self, from: json)
+    }
 
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
+    static func fromJsonString(jsonString: String) throws -> Kind {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(Kind.self, from: jsonData)
+    }
 
-class Thing:
-    """Original type: kind = [ ... | Thing of ... | ... ]"""
-
-    value: Int
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Thing'
-
-    def to_json(self) -> Any:
-        return ['Thing', _atd_write_int(self.value)]
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-class WOW:
-    """Original type: kind = [ ... | WOW | ... ]"""
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'WOW'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'wow'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-class Amaze:
-    """Original type: kind = [ ... | Amaze of ... | ... ]"""
-
-    value: [String]
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Amaze'
-
-    def to_json(self) -> Any:
-        return ['!!!', _atd_write_list(_atd_write_string)(self.value)]
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-class Kind:
-    """Original type: kind = [ ... ]"""
-
-    value: Union[Root_, Thing, WOW, Amaze]
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return self.value.kind
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'Kind':
-        if isinstance(x, str):
-            if x == 'Root':
-                return cls(Root_())
-            if x == 'wow':
-                return cls(WOW())
-            _atd_bad_json('Kind', x)
-        if isinstance(x, List) and len(x) == 2:
-            cons = x[0]
-            if cons == 'Thing':
-                return cls(Thing(_atd_read_int(x[1])))
-            if cons == '!!!':
-                return cls(Amaze(_atd_read_list(_atd_read_string)(x[1])))
-            _atd_bad_json('Kind', x)
-        _atd_bad_json('Kind', x)
-
-    def to_json(self) -> Any:
-        return self.value.to_json()
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Kind':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
+}
 
 
 class Alias:

@@ -589,189 +589,74 @@ let alias_wrapper env ~class_decorators name type_expr =
 
 let case_class env ~class_decorators type_name
     (loc, orig_name, unique_name, an, opt_e) =
-  let json_name = Atd.Json.get_json_cons orig_name an in
+  (* 
+  TODO: setup CodingKeys for custom json name
+  let json_name = Atd.Json.get_json_cons orig_name an in 
+  *)
   match opt_e with
   | None ->
       [
         Inline class_decorators;
-        Line (sprintf "class %s:" (trans env unique_name));
-        Block [
-          Line (sprintf {|"""Original type: %s = [ ... | %s | ... ]"""|}
-                  type_name
-                  orig_name);
-          Line "";
-          Line "@property";
-          Line "def kind(self) -> str:";
-          Block [
-            Line {|"""Name of the class representing this variant."""|};
-            Line (sprintf "return '%s'" (trans env unique_name))
-          ];
-          Line "";
-          Line "@staticmethod";
-          Line "def to_json() -> Any:";
-          Block [
-            Line (sprintf "return '%s'" (single_esc json_name))
-          ];
-          Line "";
-          Line "def to_json_string(self, **kw: Any) -> str:";
-          Block [
-            Line "return json.dumps(self.to_json(), **kw)"
-          ]
-        ]
+        Line (sprintf "case %s" (trans env unique_name));
+        Line (sprintf {|// Original type: %s = [ ... | %s | ... ]|}
+                type_name
+                orig_name);
       ]
   | Some e ->
       [
         Inline class_decorators;
-        Line (sprintf "class %s:" (trans env unique_name));
-        Block [
-          Line (sprintf {|"""Original type: %s = [ ... | %s of ... | ... ]"""|}
-                  type_name
-                  orig_name);
-          Line "";
-          Line (sprintf "value: %s" (type_name_of_expr env e));
-          Line "";
-          Line "@property";
-          Line "def kind(self) -> str:";
-          Block [
-            Line {|"""Name of the class representing this variant."""|};
-            Line (sprintf "return '%s'" (trans env unique_name))
-          ];
-          Line "";
-          Line "def to_json(self) -> Any:";
-          Block [
-            Line (sprintf "return ['%s', %s(self.value)]"
-                    (single_esc json_name)
-                    (json_writer env e))
-          ];
-          Line "";
-          Line "def to_json_string(self, **kw: Any) -> str:";
-          Block [
-            Line "return json.dumps(self.to_json(), **kw)"
-          ]
-        ]
+        Line (sprintf "case %s(%s)"
+                (trans env unique_name)
+                (type_name_of_expr env e));
+        Line (sprintf {|// Original type: %s = [ ... | %s of ... | ... ]|}
+                type_name
+                orig_name);
       ]
-
-let read_cases0 env loc name cases0 =
-  let ifs =
-    cases0
-    |> List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      let json_name = Atd.Json.get_json_cons orig_name an in
-      Inline [
-        Line (sprintf "if x == '%s':" (single_esc json_name));
-        Block [
-          Line (sprintf "return cls(%s())" (trans env unique_name))
-        ]
-      ]
-    )
-  in
-  [
-    Inline ifs;
-    Line (sprintf "_atd_bad_json('%s', x)"
-            (struct_name env name |> single_esc))
-  ]
-
-let read_cases1 env loc name cases1 =
-  let ifs =
-    cases1
-    |> List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      let e =
-        match opt_e with
-        | None -> assert false
-        | Some x -> x
-      in
-      let json_name = Atd.Json.get_json_cons orig_name an in
-      Inline [
-        Line (sprintf "if cons == '%s':" (single_esc json_name));
-        Block [
-          Line (sprintf "return cls(%s(%s(x[1])))"
-                  (trans env unique_name)
-                  (json_reader env e))
-        ]
-      ]
-    )
-  in
-  [
-    Inline ifs;
-    Line (sprintf "_atd_bad_json('%s', x)"
-            (struct_name env name |> single_esc))
-  ]
 
 let sum_container env ~class_decorators loc name cases =
   let swift_class_name = struct_name env name in
-  let type_list =
-    List.map (fun (loc, orig_name, unique_name, an, opt_e) ->
-      trans env unique_name
-    ) cases
-    |> String.concat ", "
-  in
-  let cases0, cases1 =
-    List.partition (fun (loc, orig_name, unique_name, an, opt_e) ->
-      opt_e = None
-    ) cases
-  in
-  let cases0_block =
-    if cases0 <> [] then
-      [
-        Line "if isinstance(x, str):";
-        Block (read_cases0 env loc name cases0)
-      ]
-    else
-      []
-  in
-  let cases1_block =
-    if cases1 <> [] then
-      [
-        Line "if isinstance(x, List) and len(x) == 2:";
-        Block [
-          Line "cons = x[0]";
-          Inline (read_cases1 env loc name cases1)
-        ]
-      ]
-    else
-      []
+  let case_classes =
+    List.map (fun x -> Inline (case_class env ~class_decorators name x)) cases
   in
   [
     Inline class_decorators;
-    Line (sprintf "class %s:" swift_class_name);
+    Line (sprintf "enum %s: Codable {" swift_class_name);
     Block [
-      Line (sprintf {|"""Original type: %s = [ ... ]"""|} name);
+      Line (sprintf {|// Original type: %s = [ ... ]|} name);
       Line "";
-      Line (sprintf "value: Union[%s]" type_list);
+      Inline case_classes;
       Line "";
-      Line "@property";
-      Line "def kind(self) -> str:";
+      Line (sprintf "static func fromJson(json: Data) throws -> %s {"
+              swift_class_name);
       Block [
-        Line {|"""Name of the class representing this variant."""|};
-        Line (sprintf "return self.value.kind")
+        Line (sprintf "return try JSONDecoder().decode(%s.self, from: json)"
+                swift_class_name);
       ];
+      Line "}";
       Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json(cls, x: Any) -> '%s':"
-              (single_esc swift_class_name));
+      Line "func toJson() throws -> Data {";
       Block [
-        Inline cases0_block;
-        Inline cases1_block;
-        Line (sprintf "_atd_bad_json('%s', x)"
-                (single_esc (struct_name env name)))
+        Line "return try JSONEncoder().encode(self)"
       ];
+      Line "}";
       Line "";
-      Line "def to_json(self) -> Any:";
+      Line (sprintf "static func fromJsonString(jsonString: String) throws -> %s {"
+              swift_class_name);
       Block [
-        Line "return self.value.to_json()";
+        Line "let jsonData = jsonString.data(using: .utf8)!";
+        Line (sprintf "return try JSONDecoder().decode(%s.self, from: jsonData)"
+                swift_class_name);
       ];
+      Line "}";
       Line "";
-      Line "@classmethod";
-      Line (sprintf "def from_json_string(cls, x: str) -> '%s':"
-              (single_esc swift_class_name));
+      Line "func toJsonString() throws -> String {";
       Block [
-        Line "return cls.from_json(json.loads(x))"
+        Line "let jsonData = try JSONEncoder().encode(self)";
+        Line "return String(data: jsonData, encoding: .utf8)!"
       ];
-      Line "";
-      Line "def to_json_string(self, **kw: Any) -> str:";
-      Block [
-        Line "return json.dumps(self.to_json(), **kw)"
-      ]
-    ]
+      Line "}";
+    ];
+    Line "}";
   ]
 
 let sum env ~class_decorators loc name cases =
@@ -784,16 +669,10 @@ let sum env ~class_decorators loc name cases =
       | Inherit _ -> assert false
     ) cases
   in
-  let case_classes =
-    List.map (fun x -> Inline (case_class env ~class_decorators name x)) cases
-    |> double_spaced
-  in
   let container_class = sum_container env ~class_decorators loc name cases in
   [
-    Inline case_classes;
     Inline container_class;
   ]
-  |> double_spaced
 
 let type_def env ((loc, (name, param, an), e) : A.type_def) : B.t =
   if param <> [] then
