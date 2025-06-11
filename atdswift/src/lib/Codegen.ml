@@ -215,31 +215,26 @@ let swift_type_name env (name : string) =
   | "abstract" -> "Data"
   | user_defined -> struct_name env user_defined
 
-let rec type_name_of_expr env (e : type_expr) : string =
+let rec type_name_of_expr env (e : type_expr) var_name : string =
   match e with
   | Sum (loc, _, _) -> not_implemented loc "inline sum types"
   | Record (loc, _, _) -> not_implemented loc "inline records"
-  | Tuple (loc, xs, an) ->
-      let type_names =
-        xs
-        |> List.map (fun (loc, x, an) -> type_name_of_expr env x)
-      in
-      sprintf "(%s)" (String.concat ", " type_names)
+  | Tuple (loc, xs, an) -> sprintf "%sTuple" (String.capitalize_ascii var_name)
   | List (loc, e, an) ->
      (match assoc_kind loc e an with
        | Array_list
        | Object_list _ ->
            sprintf "[%s]"
-             (type_name_of_expr env e)
+             (type_name_of_expr env e var_name)
        | Array_dict (key, value) ->
            sprintf "[%s: %s]"
-             (type_name_of_expr env key) (type_name_of_expr env value)
+             (type_name_of_expr env key var_name) (type_name_of_expr env value var_name)
        | Object_dict value ->
            sprintf "[String: %s]"
-             (type_name_of_expr env value)
+             (type_name_of_expr env value var_name)
       )
-  | Option (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
-  | Nullable (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e)
+  | Option (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e var_name)
+  | Nullable (loc, e, an) -> sprintf "%s?" (type_name_of_expr env e var_name)
   | Shared (loc, e, an) -> not_implemented loc "shared"
   | Wrap (loc, e, an) -> todo "wrap"
   | Name (loc, (loc2, name, []), an) -> swift_type_name env name
@@ -303,6 +298,26 @@ let unwrap_field_type loc field_name kind e =
             (sprintf "the type of optional field '%s' should be of \
                       the form 'xxx option'" field_name)
 
+let rec unwrap_element_type env (e : type_expr) : type_expr =
+  match e with
+  | Sum (loc, _, _) -> not_implemented loc "inline sum types"
+  | Record (loc, _, _) -> not_implemented loc "inline records"
+  | Tuple (loc, xs, an) -> e
+  | List (loc, e, an) ->
+     (match assoc_kind loc e an with
+       | Array_list -> e
+       | Object_list _ -> unwrap_element_type env e
+       | Array_dict (key, value) -> unwrap_element_type env value
+       | Object_dict value -> unwrap_element_type env value
+      )
+  | Option (loc, e, an) -> unwrap_element_type env e
+  | Nullable (loc, e, an) -> unwrap_element_type env e
+  | Shared (loc, e, an) -> not_implemented loc "shared"
+  | Wrap (loc, e, an) -> todo "wrap"
+  | Name (loc, (loc2, name, []), an) -> e
+  | Name (loc, (_, name, _::_), _) -> assert false
+  | Tvar (loc, _) -> not_implemented loc "type variables"
+
 (*
    Instance variable that's really the name of the getter method created
    by @dataclass. It can't start with '__' as those are reserved for
@@ -314,7 +329,7 @@ let inst_var_name trans_meth field_name =
 let inst_var_declaration
     env trans_meth ((loc, (name, kind, an), e) : simple_field) =
   let var_name = inst_var_name trans_meth name in
-  let type_name = type_name_of_expr env e in
+  let type_name = type_name_of_expr env e var_name in
   let unwrapped_e = unwrap_field_type loc name kind e in
   let default =
     match kind with
@@ -328,6 +343,29 @@ let inst_var_declaration
   [
     Line (sprintf "var %s: %s%s" var_name type_name default)
   ]
+
+(*
+  create explicit structs as named tuples for Codable conformance
+*)
+let tuple_struct_declaration env name e =
+  let unwrapped_e = unwrap_element_type env e in
+  match unwrapped_e with
+  | Tuple (loc, xs, an) ->
+      let type_names =
+        List.mapi (fun i (loc, x, an) ->
+          let type_name = type_name_of_expr env x name in
+          Line (sprintf "var field%d: %s" i type_name)
+        ) xs
+      in
+      [
+        Line (sprintf "struct %sTuple: Codable {" (String.capitalize_ascii name));
+        Block [
+          Inline type_names;
+        ];
+        Line "}";
+        Line "";
+      ]
+  | _ -> []
 
 let record env ~class_decorators loc name (fields : field list) an =
   let swift_class_name = struct_name env name in
@@ -346,6 +384,11 @@ let record env ~class_decorators loc name (fields : field list) an =
   in
   let inst_var_declarations =
     List.map (fun x -> Inline (inst_var_declaration env trans_meth x)) fields
+  in
+  let tuple_structs = 
+    List.map (fun (loc, (name, kind, an), e) -> 
+      Inline (tuple_struct_declaration env name e)
+    ) fields
   in
   let from_json =
     [
@@ -395,6 +438,7 @@ let record env ~class_decorators loc name (fields : field list) an =
     Block (spaced [
       Line (sprintf {|// Original type: %s = { ... }|} name);
       Inline inst_var_declarations;
+      Inline tuple_structs;
       Inline from_json;
       Inline to_json;
       Inline from_json_string;
@@ -421,12 +465,17 @@ class Foo:
 *)
 let alias_wrapper env ~class_decorators name type_expr =
   let swift_class_name = struct_name env name in
-  let value_type = type_name_of_expr env type_expr in
+  let value_type = type_name_of_expr env type_expr name in
+  let tuple_structs = tuple_struct_declaration env name type_expr in
   [
     Inline class_decorators;
+    Inline tuple_structs;
     Line (sprintf "typealias %s = %s" swift_class_name value_type);
     Line "";
-    Line (sprintf "extension %s: Codable {" swift_class_name);
+    if tuple_structs = [] then
+      Line (sprintf "extension %s: Codable {" swift_class_name)
+    else
+      Line (sprintf "extension %s {" swift_class_name);
     Block [
       Line (sprintf {|// Original type: %s|} name);
       Line "";
@@ -483,7 +532,7 @@ let case_class env ~class_decorators type_name
         Inline class_decorators;
         Line (sprintf "case %s(%s)"
                 (trans env unique_name)
-                (type_name_of_expr env e));
+                (type_name_of_expr env e ""));
         Line (sprintf {|// Original type: %s = [ ... | %s of ... | ... ]|}
                 type_name
                 orig_name);

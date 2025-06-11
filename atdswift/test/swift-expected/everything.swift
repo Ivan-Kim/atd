@@ -90,13 +90,19 @@ extension Alias: Codable {
   }
 }
 
-typealias KindParametrizedTuple = (Kind, Kind, Int)
+struct _kind_parametrized_tupleTuple: Codable {
+  var field0: Kind
+  var field1: Kind
+  var field2: Int
+}
 
-extension KindParametrizedTuple: Codable {
+typealias KindParametrizedTuple = _kind_parametrized_tupleTuple
+
+extension KindParametrizedTuple {
   // Original type: _kind_parametrized_tuple
 
   static func fromJson(json: Data) throws -> KindParametrizedTuple {
-    return try JSONDecoder().decode((Kind, Kind, Int).self, from: json)
+    return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: json)
   }
 
   func toJson() throws -> Data {
@@ -105,7 +111,7 @@ extension KindParametrizedTuple: Codable {
 
   static func fromJsonString(jsonString: String) throws -> KindParametrizedTuple {
     let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode((Kind, Kind, Int).self, from: jsonData)
+    return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: jsonData)
   }
 
   func toJsonString() throws -> String {
@@ -147,10 +153,10 @@ struct Root: Codable {
   var x___init__: Double
   var items: [[Int]]
   var aliased: Alias
-  var point: (Double, Double)
+  var point: PointTuple
   var kinds: [Kind]
-  var assoc1: [(Double, Int)]
-  var assoc2: [(String, Int)]
+  var assoc1: [Assoc1Tuple]
+  var assoc2: [Assoc2Tuple]
   var assoc3: [Double: Int]
   var assoc4: [String: Int]
   var nullables: [Int?]
@@ -161,6 +167,21 @@ struct Root: Codable {
   var maybe: Int?
   var extras: [Int] = []
   var answer: Int = 42
+
+  struct PointTuple: Codable {
+    var field0: Double
+    var field1: Double
+  }
+
+  struct Assoc1Tuple: Codable {
+    var field0: Double
+    var field1: Int
+  }
+
+  struct Assoc2Tuple: Codable {
+    var field0: String
+    var field1: Int
+  }
 
   static func fromJson(json: Data) throws -> Root {
     return try JSONDecoder().decode(Root.self, from: json)
@@ -181,13 +202,18 @@ struct Root: Codable {
   }
 }
 
-typealias Pair = (String, Int)
+struct PairTuple: Codable {
+  var field0: String
+  var field1: Int
+}
 
-extension Pair: Codable {
+typealias Pair = PairTuple
+
+extension Pair {
   // Original type: pair
 
   static func fromJson(json: Data) throws -> Pair {
-    return try JSONDecoder().decode((String, Int).self, from: json)
+    return try JSONDecoder().decode(PairTuple.self, from: json)
   }
 
   func toJson() throws -> Data {
@@ -196,7 +222,7 @@ extension Pair: Codable {
 
   static func fromJsonString(jsonString: String) throws -> Pair {
     let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode((String, Int).self, from: jsonData)
+    return try JSONDecoder().decode(PairTuple.self, from: jsonData)
   }
 
   func toJsonString() throws -> String {
