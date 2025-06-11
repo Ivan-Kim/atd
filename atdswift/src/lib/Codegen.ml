@@ -359,7 +359,7 @@ let tuple_struct_declaration env name e =
         ) xs
       in
       [
-        Line (sprintf "struct %sTuple: Codable {" (String.capitalize_ascii name));
+        Line (sprintf "struct %sTuple: Codable, Equatable {" (String.capitalize_ascii name));
         Block [
           Inline type_names;
         ];
@@ -435,7 +435,7 @@ let record env ~class_decorators loc name (fields : field list) an =
   in
   [
     Inline class_decorators;
-    Line (sprintf "struct %s: Codable {" swift_class_name);
+    Line (sprintf "struct %s: Codable, Equatable {" swift_class_name);
     Block (spaced [
       Line (sprintf {|// Original type: %s = { ... }|} name);
       Inline inst_var_declarations;
@@ -474,7 +474,7 @@ let alias_wrapper env ~class_decorators name type_expr =
     Line (sprintf "typealias %s = %s" swift_class_name value_type);
     Line "";
     if tuple_structs = [] then
-      Line (sprintf "extension %s: Codable {" swift_class_name)
+      Line (sprintf "extension %s: Codable, Equatable {" swift_class_name)
     else
       Line (sprintf "extension %s {" swift_class_name);
     Block [
@@ -546,7 +546,7 @@ let sum_container env ~class_decorators loc name cases =
   in
   [
     Inline class_decorators;
-    Line (sprintf "enum %s: Codable {" swift_class_name);
+    Line (sprintf "enum %s: Codable, Equatable {" swift_class_name);
     Block [
       Line (sprintf {|// Original type: %s = [ ... ]|} name);
       Line "";

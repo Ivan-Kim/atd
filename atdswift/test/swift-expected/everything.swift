@@ -11,7 +11,7 @@ import Foundation
 
 
 
-struct RecursiveClass: Codable {
+struct RecursiveClass: Codable, Equatable {
     // Original type: recursive_class = { ... }
 
     var id: Int
@@ -38,7 +38,7 @@ struct RecursiveClass: Codable {
 }
 
 
-enum Kind: Codable {
+enum Kind: Codable, Equatable {
     // Original type: kind = [ ... ]
 
     case Root_
@@ -72,7 +72,7 @@ enum Kind: Codable {
 
 typealias Alias = [Int]
 
-extension Alias: Codable {
+extension Alias: Codable, Equatable {
     // Original type: alias
 
     static func fromJson(json: Data) throws -> Alias {
@@ -95,7 +95,7 @@ extension Alias: Codable {
 }
 
 
-struct _kind_parametrized_tupleTuple: Codable {
+struct _kind_parametrized_tupleTuple: Codable, Equatable {
     var field0: Kind
     var field1: Kind
     var field2: Int
@@ -126,7 +126,7 @@ extension KindParametrizedTuple {
 }
 
 
-struct IntFloatParametrizedRecord: Codable {
+struct IntFloatParametrizedRecord: Codable, Equatable {
     // Original type: _int_float_parametrized_record = { ... }
 
     var field_a: Int
@@ -152,7 +152,7 @@ struct IntFloatParametrizedRecord: Codable {
 }
 
 
-struct Root: Codable {
+struct Root: Codable, Equatable {
     // Original type: root = { ... }
 
     var id: String
@@ -175,17 +175,17 @@ struct Root: Codable {
     var extras: [Int] = []
     var answer: Int = 42
 
-    struct PointTuple: Codable {
+    struct PointTuple: Codable, Equatable {
         var field0: Double
         var field1: Double
     }
 
-    struct Assoc1Tuple: Codable {
+    struct Assoc1Tuple: Codable, Equatable {
         var field0: Double
         var field1: Int
     }
 
-    struct Assoc2Tuple: Codable {
+    struct Assoc2Tuple: Codable, Equatable {
         var field0: String
         var field1: Int
     }
@@ -211,7 +211,7 @@ struct Root: Codable {
 }
 
 
-struct PairTuple: Codable {
+struct PairTuple: Codable, Equatable {
     var field0: String
     var field1: Int
 }
@@ -241,7 +241,7 @@ extension Pair {
 }
 
 
-struct DefaultList: Codable {
+struct DefaultList: Codable, Equatable {
     // Original type: default_list = { ... }
 
     var items: [Int] = []
