@@ -9,248 +9,258 @@ import Foundation
 
 // Public classes
 
+
+
 struct RecursiveClass: Codable {
-  // Original type: recursive_class = { ... }
+    // Original type: recursive_class = { ... }
 
-  var id: Int
-  var flag: Bool
-  var children: [RecursiveClass]
+    var id: Int
+    var flag: Bool
+    var children: [RecursiveClass]
 
-  static func fromJson(json: Data) throws -> RecursiveClass {
-    return try JSONDecoder().decode(RecursiveClass.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> RecursiveClass {
+        return try JSONDecoder().decode(RecursiveClass.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> RecursiveClass {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(RecursiveClass.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> RecursiveClass {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(RecursiveClass.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
+
 
 enum Kind: Codable {
-  // Original type: kind = [ ... ]
+    // Original type: kind = [ ... ]
 
-  case Root_
-  // Original type: kind = [ ... | Root | ... ]
-  case Thing(Int)
-  // Original type: kind = [ ... | Thing of ... | ... ]
-  case WOW
-  // Original type: kind = [ ... | WOW | ... ]
-  case Amaze([String])
-  // Original type: kind = [ ... | Amaze of ... | ... ]
+    case Root_
+    // Original type: kind = [ ... | Root | ... ]
+    case Thing(Int)
+    // Original type: kind = [ ... | Thing of ... | ... ]
+    case WOW
+    // Original type: kind = [ ... | WOW | ... ]
+    case Amaze([String])
+    // Original type: kind = [ ... | Amaze of ... | ... ]
 
-  static func fromJson(json: Data) throws -> Kind {
-    return try JSONDecoder().decode(Kind.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> Kind {
+        return try JSONDecoder().decode(Kind.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> Kind {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(Kind.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> Kind {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(Kind.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
+
 
 typealias Alias = [Int]
 
 extension Alias: Codable {
-  // Original type: alias
+    // Original type: alias
 
-  static func fromJson(json: Data) throws -> Alias {
-    return try JSONDecoder().decode([Int].self, from: json)
-  }
+    static func fromJson(json: Data) throws -> Alias {
+        return try JSONDecoder().decode([Int].self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> Alias {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode([Int].self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> Alias {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode([Int].self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
 
+
 struct _kind_parametrized_tupleTuple: Codable {
-  var field0: Kind
-  var field1: Kind
-  var field2: Int
+    var field0: Kind
+    var field1: Kind
+    var field2: Int
 }
 
 typealias KindParametrizedTuple = _kind_parametrized_tupleTuple
 
 extension KindParametrizedTuple {
-  // Original type: _kind_parametrized_tuple
+    // Original type: _kind_parametrized_tuple
 
-  static func fromJson(json: Data) throws -> KindParametrizedTuple {
-    return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> KindParametrizedTuple {
+        return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> KindParametrizedTuple {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> KindParametrizedTuple {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(_kind_parametrized_tupleTuple.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
+
 
 struct IntFloatParametrizedRecord: Codable {
-  // Original type: _int_float_parametrized_record = { ... }
+    // Original type: _int_float_parametrized_record = { ... }
 
-  var field_a: Int
-  var field_b: [Double] = []
+    var field_a: Int
+    var field_b: [Double] = []
 
-  static func fromJson(json: Data) throws -> IntFloatParametrizedRecord {
-    return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> IntFloatParametrizedRecord {
+        return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> IntFloatParametrizedRecord {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> IntFloatParametrizedRecord {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(IntFloatParametrizedRecord.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
+
 
 struct Root: Codable {
-  // Original type: root = { ... }
+    // Original type: root = { ... }
 
-  var id: String
-  var await_: Bool
-  var x___init__: Double
-  var items: [[Int]]
-  var aliased: Alias
-  var point: PointTuple
-  var kinds: [Kind]
-  var assoc1: [Assoc1Tuple]
-  var assoc2: [Assoc2Tuple]
-  var assoc3: [Double: Int]
-  var assoc4: [String: Int]
-  var nullables: [Int?]
-  var options: [Int?]
-  var untyped_things: [Data]
-  var parametrized_record: IntFloatParametrizedRecord
-  var parametrized_tuple: KindParametrizedTuple
-  var maybe: Int?
-  var extras: [Int] = []
-  var answer: Int = 42
+    var id: String
+    var await_: Bool
+    var x___init__: Double
+    var items: [[Int]]
+    var aliased: Alias
+    var point: PointTuple
+    var kinds: [Kind]
+    var assoc1: [Assoc1Tuple]
+    var assoc2: [Assoc2Tuple]
+    var assoc3: [Double: Int]
+    var assoc4: [String: Int]
+    var nullables: [Int?]
+    var options: [Int?]
+    var untyped_things: [Data]
+    var parametrized_record: IntFloatParametrizedRecord
+    var parametrized_tuple: KindParametrizedTuple
+    var maybe: Int?
+    var extras: [Int] = []
+    var answer: Int = 42
 
-  struct PointTuple: Codable {
-    var field0: Double
-    var field1: Double
-  }
+    struct PointTuple: Codable {
+        var field0: Double
+        var field1: Double
+    }
 
-  struct Assoc1Tuple: Codable {
-    var field0: Double
-    var field1: Int
-  }
+    struct Assoc1Tuple: Codable {
+        var field0: Double
+        var field1: Int
+    }
 
-  struct Assoc2Tuple: Codable {
-    var field0: String
-    var field1: Int
-  }
+    struct Assoc2Tuple: Codable {
+        var field0: String
+        var field1: Int
+    }
 
-  static func fromJson(json: Data) throws -> Root {
-    return try JSONDecoder().decode(Root.self, from: json)
-  }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    static func fromJson(json: Data) throws -> Root {
+        return try JSONDecoder().decode(Root.self, from: json)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> Root {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(Root.self, from: jsonData)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    static func fromJsonString(jsonString: String) throws -> Root {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(Root.self, from: jsonData)
+    }
+
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
 
+
 struct PairTuple: Codable {
-  var field0: String
-  var field1: Int
+    var field0: String
+    var field1: Int
 }
 
 typealias Pair = PairTuple
 
 extension Pair {
-  // Original type: pair
+    // Original type: pair
 
-  static func fromJson(json: Data) throws -> Pair {
-    return try JSONDecoder().decode(PairTuple.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> Pair {
+        return try JSONDecoder().decode(PairTuple.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> Pair {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(PairTuple.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> Pair {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(PairTuple.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
 
+
 struct DefaultList: Codable {
-  // Original type: default_list = { ... }
+    // Original type: default_list = { ... }
 
-  var items: [Int] = []
+    var items: [Int] = []
 
-  static func fromJson(json: Data) throws -> DefaultList {
-    return try JSONDecoder().decode(DefaultList.self, from: json)
-  }
+    static func fromJson(json: Data) throws -> DefaultList {
+        return try JSONDecoder().decode(DefaultList.self, from: json)
+    }
 
-  func toJson() throws -> Data {
-    return try JSONEncoder().encode(self)
-  }
+    func toJson() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
 
-  static func fromJsonString(jsonString: String) throws -> DefaultList {
-    let jsonData = jsonString.data(using: .utf8)!
-    return try JSONDecoder().decode(DefaultList.self, from: jsonData)
-  }
+    static func fromJsonString(jsonString: String) throws -> DefaultList {
+        let jsonData = jsonString.data(using: .utf8)!
+        return try JSONDecoder().decode(DefaultList.self, from: jsonData)
+    }
 
-  func toJsonString() throws -> String {
-    let jsonData = try JSONEncoder().encode(self)
-    return String(data: jsonData, encoding: .utf8)!
-  }
+    func toJsonString() throws -> String {
+        let jsonData = try JSONEncoder().encode(self)
+        return String(data: jsonData, encoding: .utf8)!
+    }
 }
