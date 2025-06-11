@@ -293,6 +293,7 @@ let unwrap_field_type loc field_name kind e =
   | Optional ->
       match e with
       | Option (loc, e, an) -> e
+      | Nullable (loc, e, an) -> e
       | _ ->
           A.error_at loc
             (sprintf "the type of optional field '%s' should be of \
